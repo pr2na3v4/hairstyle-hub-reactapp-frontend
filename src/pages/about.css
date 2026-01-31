@@ -1,0 +1,204 @@
+
+:root {
+    --color-primary: #1a1a1a; /* Dark background for cards/buttons */
+    --color-secondary: #635a5a; /* Title text color */
+    --color-accent: #ff7f50; /* A soft coral/orange for highlights */
+    --color-text: #333;
+    --color-light-bg: #f4f4f9;
+    --font-heading: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    --font-body: Arial, Helvetica, sans-serif;
+}
+
+
+
+main {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Headings */
+h1, h2, h3 {
+    font-family: var(--font-heading);
+    color: var(--color-primary);
+}
+
+/* Utility Class for Icons */
+.icon {
+    font-size: 1.2em;
+    color: var(--color-accent);
+    margin-right: 8px;
+}
+
+
+/* =========================================
+   2. HEADER & TITLE SECTION
+   ========================================= */
+.about-header {
+    text-align: center;
+    padding: 40px 0 20px;
+    border-bottom: 2px solid #ddd;
+    margin-bottom: 30px;
+}
+
+.about-header h1 {
+    font-size: 2.5rem;
+    font-weight: 900;
+    color: var(--color-secondary);
+    margin-bottom: 10px;
+    letter-spacing: -1px;
+}
+
+.about-header p {
+    font-size: 1.1rem;
+    color: #666;
+    max-width: 700px;
+    margin: 0 auto;
+}
+
+/* =========================================
+   3. PHASE CARDS SECTION
+   ========================================= */
+.phase-section {
+    padding: 20px 0;
+}
+
+.phase-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border-top: 5px solid var(--color-accent);
+}
+
+.phase-card h2 {
+    font-size: 1.6rem;
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    color: var(--color-primary);
+}
+
+.phase-card h2 .icon {
+    font-size: 1.8rem;
+    margin-right: 10px;
+}
+
+.phase-card h3 {
+    font-size: 1.3rem;
+    margin-top: 15px;
+    margin-bottom: 8px;
+    border-left: 3px solid var(--color-accent);
+    padding-left: 10px;
+    color: #444;
+}
+
+.phase-card ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.phase-card li {
+    padding: 8px 0;
+    display: flex;
+    align-items: flex-start;
+}
+
+.phase-card li::before {
+    content: '✓';
+    font-weight: bold;
+    color: var(--color-accent);
+    margin-right: 10px;
+    flex-shrink: 0;
+}
+
+
+/* =========================================
+   4. LONG-TERM VISION SECTION
+   ========================================= */
+.vision-section {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 40px 25px;
+    border-radius: 12px;
+    text-align: center;
+    margin-top: 30px;
+}
+
+.vision-section h2 {
+    color: var(--color-accent);
+    margin-bottom: 10px;
+    font-size: 2rem;
+}
+
+.vision-section p {
+    font-size: 1.1rem;
+    margin-bottom: 20px;
+    opacity: 0.9;
+}
+
+.vision-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin-top: 25px;
+}
+
+.vision-item {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.vision-item:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.vision-item::before {
+    content: '★';
+    color: var(--color-accent);
+    margin-right: 10px;
+    font-size: 1.2em;
+}
+
+/* =========================================
+   5. MEDIA QUERIES (Responsiveness)
+   ========================================= */
+
+/* Tablets and Desktops (Larger Screens) */
+@media (min-width: 768px) {
+    .about-header h1 {
+        font-size: 3.5rem;
+    }
+
+    .phase-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 30px;
+    }
+
+    .vision-list {
+        flex-direction: row;
+        justify-content: space-around;
+        gap: 20px;
+    }
+    
+    .vision-item {
+        flex: 1;
+        max-width: 300px;
+    }
+}
+
+/* Extra Large Screens */
+@media (min-width: 1024px) {
+    .phase-grid {
+        grid-template-columns: repeat(3, 1fr); /* 3 cards per row */
+    }
+}

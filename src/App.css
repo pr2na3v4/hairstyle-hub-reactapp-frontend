@@ -1,0 +1,21 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    font-family: "BBH Hegarty", system-ui, sans-serif;
+    background: #f5f5f5;
+    line-height: 1.6;
+    height: 100%;
+    padding-bottom: 75px;  /*Ensures content isn't hidden behind the navbar */
+}
+
+
+
+.page-wrapper {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
