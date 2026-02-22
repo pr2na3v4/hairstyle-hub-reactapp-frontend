@@ -1,25 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { onAuthStateChanged } from "firebase/auth"; // Import from your firebase config
-import { auth } from './firebase-config'; // Adjust the path as necessary 
+import { Routes, Route, useLocation } from 'react-router-dom';
+import ReactGA from "react-ga4";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from './firebase-config'; 
 import Home from './pages/home';
 import Categories from './pages/categories';
 import About from './pages/about';
 import HairDetail from './pages/hairdetail';  
 import Navbar from './components/navbar';
-import Footer from './components/footer'; 
 import Login from './components/Login';
 import Profile from './pages/Profile';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 function App() {
+  const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
+  
+  // PWA Service Worker Register
+  useRegisterSW({ immediate: true });
 
-  // Listen for Auth changes globally
+  // 1. Google Analytics Page Tracking
+  useEffect(() => {
+    ReactGA.send({ 
+      hitType: "pageview", 
+      page: location.pathname + location.search 
+    });
+  }, [location]);
+
+  // 2. Firebase Auth Listener
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
     });
-    return () => unsubscribe(); // Cleanup
+    return () => unsubscribe(); 
   }, []);
 
   const navData = [
@@ -29,18 +42,17 @@ function App() {
   ];
 
   return (
-    <Router>
-       <Navbar links={navData} currentUser={currentUser} />      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/categories" element={<Categories />} />
-        <Route path="/about" element={<About />} />
-       <Route path="/login" element={<Login currentUser={currentUser} />} />
-       <Route path="/profile" element={<Profile currentUser={currentUser} />} />
-        {/* Pass currentUser here so HairDetail can check for likes/comments */}
+    <>
+      <Navbar links={navData} currentUser={currentUser} />
+      <Routes>
+        <Route path="/" element={<Home currentUser={currentUser} />} />
+        <Route path="/categories" element={<Categories currentUser={currentUser} />} />
+        <Route path="/about" element={<About currentUser={currentUser} />} />
+        <Route path="/login" element={<Login currentUser={currentUser} />} />
+        <Route path="/profile" element={<Profile currentUser={currentUser} />} />
         <Route path="/haircut/:id" element={<HairDetail currentUser={currentUser} />} />        
       </Routes>
-      <Footer links={navData} />
-    </Router>
+    </>
   );
 }
 

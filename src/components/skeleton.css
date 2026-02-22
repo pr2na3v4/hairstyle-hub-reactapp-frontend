@@ -1,0 +1,39 @@
+.skeleton-card {
+  background: #1e293b;
+  border-radius: 12px;
+  overflow: hidden;
+  height: 300px;
+  width: 100%;
+}
+
+.skeleton-img {
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(90deg, #334155 25%, #475569 50%, #334155 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+}
+
+.skeleton-info {
+  padding: 15px;
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 70%;
+  background: #334155;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.skeleton-text {
+  height: 15px;
+  width: 40%;
+  background: #334155;
+  border-radius: 4px;
+}
+
+@keyframes loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}

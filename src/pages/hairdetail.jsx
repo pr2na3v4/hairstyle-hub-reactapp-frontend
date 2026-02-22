@@ -1,66 +1,116 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate } from 'react-router-dom';
+import Loader from '../components/Loader'; 
+import Swal from 'sweetalert2';
 import './hairdetail.css';
 
 const HairDetail = ({ currentUser }) => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // State
   const [haircut, setHaircut] = useState(null);
   const [comments, setComments] = useState([]);
   const [commentText, setCommentText] = useState("");
   const [likesCount, setLikesCount] = useState(0);
   const [hasLiked, setHasLiked] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [isZoomed, setIsZoomed] = useState(false); // Zoom Logic state
+  const [showLoader, setShowLoader] = useState(false); 
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [showHint, setShowHint] = useState(false);
 
   const API_BASE = import.meta.env.VITE_API_BASE_URL;
 
+  // Loader Delay Logic: Only show loader if loading takes more than 800ms
   useEffect(() => {
-    window.scrollTo(0, 0);
-    loadAllData();
-  }, [id, currentUser]);
+    let timeout;
+    if (loading) {
+      timeout = setTimeout(() => {
+        setShowLoader(true);
+      }, 800); 
+    } else {
+      setShowLoader(false);
+    }
+    return () => clearTimeout(timeout);
+  }, [loading]);
 
-  const loadAllData = async () => {
+  // 1. Basic Data Load (Haircut & Comments)
+  const loadInitialData = useCallback(async () => {
     if (!id || id === "undefined") return;
     setLoading(true);
     try {
-      // 1. Fetch Main Haircut
-      const res = await fetch(`${API_BASE}/haircuts`);
-      const allData = await res.json();
-      const current = allData.find(x => (x._id.$oid || x._id) === id);
+      const [hairRes, commentRes] = await Promise.all([
+        fetch(`${API_BASE}/haircuts`),
+        fetch(`${API_BASE}/comments/${id}`)
+      ]);
+
+      const allData = await hairRes.json();
+      const current = allData.find(x => (x._id?.$oid || x._id) === id);
       
       if (current) {
         setHaircut(current);
+        const commentData = await commentRes.json();
+        setComments(Array.isArray(commentData) ? commentData : []);
       }
-
-      // 2. Fetch Comments
-      const commentRes = await fetch(`${API_BASE}/comments/${id}`);
-      const commentData = await commentRes.json();
-      setComments(commentData);
-
-      // 3. Fetch Like Status
-      let headers = {};
-      if (currentUser) {
-        const token = await currentUser.getIdToken();
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-      const likeRes = await fetch(`${API_BASE}/haircuts/${id}/like-status`, { headers });
-      const likeData = await likeRes.json();
-      setHasLiked(likeData.hasLiked);
-      setLikesCount(likeData.likesCount);
-
     } catch (err) {
-      console.error("Load Error:", err);
+      console.error("Initial Load Error:", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, API_BASE]);
 
+  // 2. Like Status Fetcher (Refresh nantar state tikvnyasathi)
+  const fetchLikeStatus = useCallback(async () => {
+    if (!id || id === "undefined") return;
+
+    try {
+      let headers = {};
+      if (currentUser) {
+        const token = await currentUser.getIdToken(true);
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_BASE}/haircuts/${id}/like-status`, { headers });
+      const data = await res.json();
+
+      setLikesCount(data.likesCount || 0);
+      setHasLiked(!!data.hasLiked);
+      console.log("Verified Like Status:", data.hasLiked);
+      
+    } catch (err) {
+      console.error("Like Status Error:", err);
+    }
+  }, [id, currentUser, API_BASE]);
+
+  // Effect: Page load var data ghene
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    loadInitialData();
+  }, [loadInitialData]);
+
+  // Effect: User detect jhalya-var like status update karne
+  useEffect(() => {
+    fetchLikeStatus();
+  }, [fetchLikeStatus, currentUser]);
+
+  // 3. Like Toggle Handler
   const handleLike = async (e) => {
-    e.stopPropagation(); // Prevents triggering the image zoom when clicking the heart
-    if (!currentUser) return alert("Please login to like!");
+    e.stopPropagation(); 
+    if (!currentUser) {
+      return Swal.fire({
+        title: 'Login Required',
+        text: 'Please login to save your favorite styles!',
+        icon: 'info',
+        confirmButtonText: 'Login Now',
+        confirmButtonColor: '#ff4757',
+        showCancelButton: true,
+      }).then((res) => { if (res.isConfirmed) navigate('/login'); });
+    }
+    
+    const prevLiked = hasLiked;
+    setHasLiked(!hasLiked);
+    setLikesCount(prev => hasLiked ? prev - 1 : prev + 1);
+
     try {
       const token = await currentUser.getIdToken();
       const res = await fetch(`${API_BASE}/haircuts/${id}/like`, {
@@ -71,15 +121,22 @@ const HairDetail = ({ currentUser }) => {
         }
       });
       const data = await res.json();
+      
       setHasLiked(data.liked);
       setLikesCount(data.likesCount);
+
+      if (data.liked) {
+        Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2000 })
+            .fire({ icon: 'success', title: 'Saved! ❤️' });
+      }
     } catch (err) {
-      console.error(err);
+      setHasLiked(prevLiked);
     }
   };
 
+  // 4. Comment Handler
   const postComment = async () => {
-    if (!commentText.trim()) return;
+    if (!commentText.trim() || !currentUser) return;
     try {
       const token = await currentUser.getIdToken();
       const res = await fetch(`${API_BASE}/comments`, {
@@ -88,43 +145,43 @@ const HairDetail = ({ currentUser }) => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}` 
         },
-        body: JSON.stringify({ haircutId: id, text: commentText })
+        body: JSON.stringify({ haircutId: id, text: commentText, haircutName: haircut.name })
       });
       if (res.ok) {
         const newCmt = await res.json();
-        setComments([newCmt, ...comments]);
+        setComments(prev => [newCmt, ...prev]);
         setCommentText("");
       }
     } catch (err) {
-      alert("Error posting comment");
+      console.error("Comment Error:", err);
     }
   };
 
-  const toggleZoom = () => setIsZoomed(!isZoomed);
-
-  // Guards
-  if (!id || id === "undefined") return <div className="error">Invalid Haircut ID.</div>;
-  if (loading || !haircut) return <div className="loader">Loading Haircut...</div>;
+  // --- REFACTORED LOADING RENDER ---
+  if (showLoader) return <Loader />; 
+  if (loading && !showLoader) return null; // Prevents "Style not found" flicker during the 800ms wait
+  if (!haircut) return <div className="error-msg">Style not found.</div>;
 
   return (
     <div className="hair-detail-wrapper">
-      {/* 1. Lightbox Overlay (Shows only when zoomed) */}
+     {/* 🚀 Dynamic Title Logic Start */}
+      <Helmet>
+        <title>{`${haircut.name} | HairstyleHub`}</title>
+        <meta name="description" content={`Explore the best ${haircut.name} for ${haircut.faceShape} face shape.`} />
+      </Helmet>
+      {/* Dynamic Title Logic End */}
+
       {isZoomed && (
-        <div className="image-lightbox" onClick={toggleZoom}>
-          <button className="close-lightbox"><i className="ri-close-line"></i></button>
-          <img src={haircut.imageUrl} alt="Enlarged view" className="enlarged-img" />
+        <div className="image-lightbox active" onClick={() => setIsZoomed(false)}>
+          <img src={haircut.imageUrl} alt="Zoomed" className="enlarged-img" />
         </div>
       )}
 
-      {/* 2. Hero Image Section */}
-      <div className="detail-header" onClick={toggleZoom} style={{ cursor: 'zoom-in' }}>
+      <div className="detail-header" onClick={() => setIsZoomed(true)}>
         <button className="back-btn" onClick={(e) => { e.stopPropagation(); navigate(-1); }}>
           <i className="ri-arrow-left-s-line"></i>
         </button>
-        
         <img src={haircut.imageUrl} alt={haircut.name} className="hero-img" />
-        <div className="zoom-hint">Tap to enlarge</div>
-
         <div className="floating-actions">
           <button className={`action-fab like ${hasLiked ? 'active' : ''}`} onClick={handleLike}>
             <i className={hasLiked ? "ri-heart-fill" : "ri-heart-line"}></i>
@@ -132,7 +189,6 @@ const HairDetail = ({ currentUser }) => {
         </div>
       </div>
 
-      {/* 3. Content Section */}
       <div className="detail-content">
         <div className="title-section">
           <h1>{haircut.name}</h1>
@@ -140,16 +196,8 @@ const HairDetail = ({ currentUser }) => {
         </div>
 
         <div className="specs-grid">
-          <div className="spec-item">
-            <span className="spec-label">Length</span>
-            <span className="spec-value">{haircut.hairLength}</span>
-          </div>
-          <div className="spec-item">
-            <span className="spec-label">Face Shape</span>
-            <span className="spec-value">
-                {Array.isArray(haircut.faceShape) ? haircut.faceShape.join(", ") : haircut.faceShape}
-            </span>
-          </div>
+           <div className="spec-item"><span className="spec-label">Length</span><span className="spec-value">{haircut.hairLength}</span></div>
+           <div className="spec-item"><span className="spec-label">Face Shape</span><span className="spec-value">{Array.isArray(haircut.faceShape) ? haircut.faceShape.join(", ") : haircut.faceShape}</span></div>
         </div>
 
         <div className="tags-container">
@@ -158,13 +206,12 @@ const HairDetail = ({ currentUser }) => {
 
         <hr className="divider" />
 
-        {/* 4. Comments Section */}
         <section className="comments-section">
           <h3>Community ({comments.length})</h3>
           <div className="comment-input-wrapper">
             <input 
               type="text" 
-              placeholder={currentUser ? "Write a comment..." : "Login to join the chat"}
+              placeholder={currentUser ? "Add a comment..." : "Login to comment"}
               value={commentText}
               onChange={(e) => setCommentText(e.target.value)}
               disabled={!currentUser}
@@ -175,16 +222,16 @@ const HairDetail = ({ currentUser }) => {
           </div>
 
           <div className="comment-list">
-            {comments.map(cmt => (
-              <div key={cmt._id} className="comment-card">
-                <img src={cmt.userPhoto || '/placeholder-user.png'} alt="user" />
-                <div className="comment-info">
-                  <p className="comment-user">{cmt.userName}</p>
-                  <p className="comment-text">{cmt.text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+             {comments.map(cmt => (
+               <div key={cmt._id?.$oid || cmt._id} className="comment-card">
+                 <img src={cmt.userPhoto || 'https://www.w3schools.com/howto/img_avatar.png'} alt="user" />
+                 <div className="comment-info">
+                   <p className="comment-user">{cmt.userName || "User"}</p>
+                   <p className="comment-text">{cmt.text}</p>
+                 </div>
+               </div>
+             ))}
+           </div>
         </section>
       </div>
     </div>

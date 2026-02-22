@@ -1,0 +1,114 @@
+/* 1. CSS Reset & Base Setup */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Inter', 'Segoe UI', Roboto, sans-serif; /* Modern clean font */
+}
+
+:root {
+  --primary-color: #646060;    /* तुझा ब्रँड रेड/पिंक कलर */
+  --secondary-color: #2f3542;  /* डार्क ग्रे */
+  --bg-light: #f8f9fa;         /* हलका बॅकग्राउंड */
+  --text-main: #2d3436;
+  --text-muted: #636e72;
+  --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+  --shadow-md: 0 10px 25px rgba(0,0,0,0.08);
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--bg-light);
+  color: var(--text-main);
+  line-height: 1.6;
+  overflow-x: hidden;
+  /* नॅव्हबार फिक्स्ड असल्यामुळे जागा सोडण्यासाठी */
+  padding-top: 70px; 
+}
+
+@media (max-width: 768px) {
+  body {
+    padding-top: 20px;    /* मोबाईलवर वरची जागा कमी */
+    padding-bottom: 80px; /* बॉटम नॅव्हबारसाठी खाली जागा सोडली */
+  }
+}
+
+/* 2. Typography */
+h1, h2, h3, h4 {
+  font-weight: 800;
+  color: var(--secondary-color);
+  letter-spacing: -0.5px;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+  transition: var(--transition);
+}
+
+/* 3. Reusable Components Style */
+
+/* Custom Scrollbar (Chrome, Safari sathi) */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 10px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-color);
+}
+
+/* 4. Utility Classes */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.text-center { text-align: center; }
+
+/* 5. Loader Overlay Global */
+.loader-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: white;
+  z-index: 9999;
+}
+/* SweetAlert Aesthetic Customization */
+.swal2-popup {
+  border-radius: 25px !important;
+  padding: 2rem !important;
+  font-family: 'Inter', sans-serif !important;
+}
+
+.swal2-title {
+  font-weight: 800 !important;
+  color: #2d3436 !important;
+}
+
+.swal2-confirm {
+  background-color: #4c4848 !important; /* Tuza brand color */
+  border-radius: 12px !important;
+  padding: 12px 30px !important;
+  font-weight: 600 !important;
+}
+
+.swal2-cancel {
+  border-radius: 12px !important;
+  padding: 12px 30px !important;
+}

@@ -80,14 +80,17 @@ opacity: 0.9;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 15px;
+  color: #171515;
 }
 
 .feed-header h2 {
   font-size: 1.3rem;
+  font-weight: 700;
+  color: #171515;
 }
 
 .feed-header a {
-  color: #5c5e51;
+  color: #474745;
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 600;
@@ -101,7 +104,7 @@ opacity: 0.9;
   position: absolute;
   top: 10px;
   left: 10px;
-  background: #ff4757;
+  background: #393636;
   color: white;
   padding: 4px 8px;
   border-radius: 4px;
@@ -109,4 +112,249 @@ opacity: 0.9;
   font-weight: bold;
   text-transform: uppercase;
   z-index: 2;
+}
+.hero {
+  height: 400px;
+  background: url('../assets/landing-img.jpg') center/cover; /* Make sure this is in your public folder */
+  position: relative;
+  border-radius: 0 0 30px 30px;
+  overflow: hidden;
+  margin-bottom: 30px;
+}
+
+.hero-overlay {
+  background: rgba(0, 0, 0, 0.4);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  text-align: center;
+  padding: 20px;
+}
+
+.hero-overlay h1 {
+  font-size: 2.5rem;
+  text-shadow: 2px 2px 10px rgba(0,0,0,0.5);
+}
+
+.chip-group {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding: 10px 0;
+  scrollbar-width: none; /* Hide scrollbar for clean look */
+}
+
+.chip {
+  padding: 8px 20px;
+  background: #f0f0f0;
+  border-radius: 20px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.chip:hover {
+  background: #6d6768;
+  color: white;
+}
+
+.feed-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 20px 0;
+}
+
+.see-all {
+  color: #171515;
+  text-decoration: none;
+  font-weight: 600;
+}
+.how-it-works {
+  padding: 60px 20px;
+  background-color: #ffffff;
+  text-align: center;
+}
+
+.section-header h2 {
+  font-size: 28px;
+  margin-bottom: 10px;
+  color: #1a1a1a;
+}
+
+.section-header p {
+  color: #666;
+  margin-bottom: 40px;
+}
+
+/* Container sathi entrance animation */
+.steps-container {
+  display: flex;
+  justify-content: center;
+  gap: 30px;
+  max-width: 1100px;
+  margin: 0 auto;
+  flex-wrap: wrap;
+  /* Scroll-reveal effect sathi initial state */
+  animation: fadeInContainer 1s ease-out forwards;
+}
+
+.step-card {
+  flex: 1;
+  min-width: 280px;
+  background: #ffffff;
+  padding: 45px 30px;
+  border-radius: 30px; /* Thoda jasta rounded for aesthetic look */
+  border: 1px solid rgba(0,0,0,0.03);
+  position: relative;
+  overflow: hidden;
+  /* ✨ Smoothness transition ✨ */
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+}
+
+/* 🖱️ Hover Effect: Elegant Lift */
+.step-card:hover {
+  transform: translateY(-12px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  border-color: #96898a; /* Highlight border on hover */
+}
+
+/* 🎨 Icon Animation */
+.step-icon {
+  font-size: 50px;
+  color: #dbcfd0;
+  margin-bottom: 25px;
+  transition: transform 0.3s ease;
+}
+
+.step-card:hover .step-icon {
+  transform: rotate(-10deg) scale(1.1); /* Hover kelya-var icon thoda tilt hoil */
+}
+
+/* 🌟 Keyframes for Entrance */
+@keyframes fadeInContainer {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Optional: Individual delay for each card (Staggered effect) */
+.step-card:nth-child(1) { animation-delay: 0.1s; }
+.step-card:nth-child(2) { animation-delay: 0.3s; }
+.step-card:nth-child(3) { animation-delay: 0.5s; }
+
+.step-icon {
+  font-size: 45px;
+  color: #675f5f; /* Tuza brand color ithe taka */
+  margin-bottom: 20px;
+}
+
+.step-card h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #777171;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.step-card h4 {
+  font-size: 20px;
+  margin-bottom: 15px;
+  color: #2d3436;
+}
+
+.step-card p {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #636e72;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .steps-container {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .step-card {
+    width: 80%;
+    max-width: 350px;
+  }
+}
+.step-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 4px; /* Top highlight bar */
+  background: linear-gradient(90deg, #484243, #4b4445);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.step-card:hover::before {
+  opacity: 1;
+}
+/* Skeleton Card Styling */
+.skeleton-card {
+  background: #1e293b;
+  border-radius: 12px;
+  height: 300px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-img {
+  height: 200px;
+  width: 100%;
+  background: #2d3748;
+}
+
+.skeleton-content {
+  padding: 15px;
+}
+
+.skeleton-line {
+  height: 12px;
+  background: #2d3748;
+  margin-bottom: 10px;
+  border-radius: 4px;
+}
+
+.skeleton-line.short { width: 50%; }
+
+/* Shimmer Animation */
+.shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer::after {
+  content: "";
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0) 0,
+    rgba(255, 255, 255, 0.05) 20%,
+    rgba(255, 255, 255, 0.1) 60%,
+    rgba(255, 255, 255, 0)
+  );
+  animation: shimmer-ani 1.5s infinite;
+}
+
+@keyframes shimmer-ani {
+  100% { transform: translateX(100%); }
 }

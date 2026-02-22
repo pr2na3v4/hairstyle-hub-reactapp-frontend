@@ -20,7 +20,7 @@
   cursor: zoom-in;
   object-fit: cover;
   margin-bottom: 15px;
-  border: 3px solid #312e2f;
+  border: 3px solid #f3f1f2;
 }
 
 .profile-btns {
@@ -29,7 +29,51 @@
   gap: 10px;
   margin-top: 15px;
 }
+/* Fixed Lightbox - Full Screen Focus */
+.image-lightbox {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;       /* Fixed 100vw to 100% */
+  height: 50vh;      /* Changed 50vh to 100% for full screen */
+  /* Deep dark for focus */
+  display: none; 
+  align-items: center; 
+  justify-content: center;
+  z-index: 9999;     /* Highest z-index to stay on top of everything */
+  cursor: zoom-out;  /* UI hint to close */
+}
 
+.image-lightbox.active {
+  display: flex;
+}
+
+/* Lightbox Image - Responsive and Centered */
+.enlarged-img {
+  max-width: 90%;
+  max-height: 80%;
+  border-radius: 12px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  object-fit: contain; /* Keeps aspect ratio perfect */
+  animation: zoomIn 0.3s ease-out;
+}
+
+/* Optional Close Button */
+.close-lightbox {
+  position: absolute;
+  top: 30px;
+  right: 30px;
+  color: white;
+  font-size: 30px;
+  cursor: pointer;
+  background: none;
+  border: none;
+}
+
+@keyframes zoomIn {
+  from { transform: scale(0.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
 .edit-btn, .logout-btn {
   padding: 8px 20px;
   border-radius: 20px;
