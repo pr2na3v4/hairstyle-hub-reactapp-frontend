@@ -24,7 +24,6 @@ const Login = () => {
   return (
     <div className="login-page">
       <div className="login-card">
-        <i className="ri-user-smile-line login-icon"></i>
         <h1>Welcome Back</h1>
         <p>Login to save your favorite hairstyles and join the community.</p>
         
