@@ -10,6 +10,7 @@ import HairDetail from './pages/hairdetail';
 import Navbar from './components/navbar';
 import Login from './components/Login';
 import Profile from './pages/Profile';
+import FaceScanPage from './pages/FaceScanPage';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 
 function App() {
@@ -38,7 +39,7 @@ function App() {
   const navData = [
     { label: 'Home', path: '/', icon: 'ri-home-5-line' },
     { label: 'Styles', path: '/categories', icon: 'ri-layout-grid-line' },
-    { label: 'About', path: '/about', icon: 'ri-user-smile-line' }
+    { label: 'Face Scan', path: '/face-scan', icon: 'ri-camera-lens-line' },
   ];
 
   return (
@@ -50,7 +51,8 @@ function App() {
         <Route path="/about" element={<About currentUser={currentUser} />} />
         <Route path="/login" element={<Login currentUser={currentUser} />} />
         <Route path="/profile" element={<Profile currentUser={currentUser} />} />
-        <Route path="/haircut/:id" element={<HairDetail currentUser={currentUser} />} />        
+        <Route path="/haircut/:id" element={<HairDetail currentUser={currentUser} />} />
+        <Route path="/face-scan" element={<FaceScanPage currentUser={currentUser} />} />        
       </Routes>
     </>
   );
