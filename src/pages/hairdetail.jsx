@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useParams, useNavigate } from 'react-router-dom';
 import Loader from '../components/Loader'; 
+import { Cards } from '../components/cards';
+import Categories from './categories';
 import Swal from 'sweetalert2';
 import './hairdetail.css';
 
@@ -163,7 +165,8 @@ const HairDetail = ({ currentUser }) => {
   if (!haircut) return <div className="error-msg">Style not found.</div>;
 
   return (
-    <div className="hair-detail-wrapper">
+    <>
+       <div className="hair-detail-wrapper">
      {/* 🚀 Dynamic Title Logic Start */}
       <Helmet>
         <title>{`${haircut.name} | HairstyleHub`}</title>
@@ -233,8 +236,15 @@ const HairDetail = ({ currentUser }) => {
              ))}
            </div>
         </section>
+         
       </div>
+     
     </div>
+          <div className="related-styles">
+            <h2>Related Styles</h2>
+            <Categories showAll={false} faceShapeFilter={haircut.faceShape} currentUser={currentUser} />
+          </div>
+    </>
   );
 };
 
