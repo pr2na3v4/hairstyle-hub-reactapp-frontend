@@ -5,6 +5,8 @@ import React, {
     useCallback,
     useMemo,
 } from 'react';
+import { useNavigate } from 'react-router-dom';
+import Swal from 'sweetalert2';
 import { Card } from '../components/cards';
 import './FaceScanPage.css';
 import Loader from '../components/Loader';
@@ -42,7 +44,7 @@ const fetchHaircutsByShape = async (shape) => {
 };
 
 // ─── Custom Hook ──────────────────────────────────────────────────────────────
-const useFaceScan = () => {
+const useFaceScan = (currentUser) => {
     const [phase, setPhase]                     = useState('idle'); 
     const [result, setResult]                   = useState(null);
     const [recommendations, setRecommendations] = useState([]);
@@ -70,6 +72,7 @@ const useFaceScan = () => {
     }, [error]);
 
     const startCamera = useCallback(async () => {
+        if (!currentUser) return; // Guard
         setError(null);
         setPhase('camera');
         try {
@@ -82,10 +85,10 @@ const useFaceScan = () => {
             setError('Camera access denied. Please allow camera permission.');
             setPhase('idle');
         }
-    }, []);
+    }, [currentUser]);
 
     const handleAnalysis = useCallback(async (fileSource) => {
-        if (isLoadingRef.current) return;
+        if (isLoadingRef.current || !currentUser) return;
         isLoadingRef.current = true;
 
         setPhase('loading');
@@ -111,7 +114,7 @@ const useFaceScan = () => {
         } finally {
             isLoadingRef.current = false;
         }
-    }, [stopCamera]);
+    }, [stopCamera, currentUser]);
 
     const captureFromCamera = useCallback(() => {
         const video  = videoRef.current;
@@ -169,24 +172,14 @@ const FilterChips = ({ active, onChange }) => (
 const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
     const [filter, setFilter] = useState('All');
 
-    // 1. Primary Grid logic
     const filteredItems = useMemo(
-        () =>
-            filter === 'All'
-                ? recommendations
-                : recommendations.filter((h) => h.hairLength === filter),
+        () => filter === 'All' ? recommendations : recommendations.filter((h) => h.hairLength === filter),
         [recommendations, filter]
     );
 
-    // 2. Similar Styles logic - Shows styles NOT currently in the filtered view
     const similarStyles = useMemo(() => {
-        const pool = filter === 'All' 
-            ? recommendations 
-            : recommendations.filter(h => h.hairLength !== filter);
-
-        return [...pool]
-            .sort(() => 0.5 - Math.random()) 
-            .slice(0, 4);
+        const pool = filter === 'All' ? recommendations : recommendations.filter(h => h.hairLength !== filter);
+        return [...pool].sort(() => 0.5 - Math.random()).slice(0, 4);
     }, [recommendations, filter]);
 
     return (
@@ -200,9 +193,7 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
                     <div className="result-details">
                         <h2 className="result-label">Analysis Complete</h2>
                         <h3 className="detected-shape">{result.detected_shape}</h3>
-                        <p className="confidence-text">
-                            Confidence: <span>{result.confidence}</span>
-                        </p>
+                        <p className="confidence-text">Confidence: <span>{result.confidence}</span></p>
                         <button onClick={onReset} className="reset-btn">Try Again</button>
                     </div>
                 </div>
@@ -212,21 +203,11 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
 
             <section className="recommendations-section">
                 <h4 className="grid-title">Top {filter !== 'All' ? filter : ''} Picks</h4>
-                {filteredItems.length > 0 ? (
-                    <div className="cards-grid">
-                        {filteredItems.map((h) => (
-                            <Card 
-                                key={h._id?.$oid || h._id} 
-                                id={h._id?.$oid || h._id} 
-                                imageUrl={h.imageUrl} 
-                                name={h.name} 
-                                description={h.style} 
-                            />
-                        ))}     
-                    </div>
-                ) : (
-                    <p className="empty-state">No matches found for this length.</p>
-                )}
+                <div className="cards-grid">
+                    {filteredItems.map((h) => (
+                        <Card key={h._id?.$oid || h._id} id={h._id?.$oid || h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
+                    ))}     
+                </div>
             </section>
 
             {similarStyles.length > 0 && (
@@ -235,13 +216,7 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
                     <h4 className="grid-title">More Styles for {result.detected_shape} Faces</h4>
                     <div className="cards-grid">
                         {similarStyles.map((h) => (
-                            <Card 
-                                key={h._id?.$oid || h._id} 
-                                id={h._id?.$oid || h._id} 
-                                imageUrl={h.imageUrl} 
-                                name={h.name} 
-                                description={h.style} 
-                            />
+                            <Card key={h._id?.$oid || h._id} id={h._id?.$oid || h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
                         ))}
                     </div>
                 </section>
@@ -251,21 +226,39 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
 };
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
-const FaceScanPage = () => {
+const FaceScanPage = ({ currentUser, authLoading }) => {
+    const navigate = useNavigate();
     const {
         phase, result, recommendations, capturedImg, error,
         videoRef, canvasRef, fileInputRef,
         startCamera, stopCamera, captureFromCamera, handleAnalysis, reset, setError,
-    } = useFaceScan();
+    } = useFaceScan(currentUser);
+
+    // 1. User Check Logic
+    useEffect(() => {
+        if (!authLoading && !currentUser) {
+            Swal.fire({
+                title: 'Members Only',
+                text: 'Please login to access the AI Face Scan feature.',
+                icon: 'lock',
+                confirmButtonColor: '#ff4757',
+                confirmButtonText: 'Go to Login',
+                allowOutsideClick: false
+            }).then(() => {
+                navigate('/login');
+            });
+        }
+    }, [currentUser, authLoading, navigate]);
+
+    if (authLoading) return <Loader />;
+    if (!currentUser) return null; // Prevent UI flicker before redirect
 
     return (
         <div className="facescan-page">
             {phase === 'idle' && (
                 <section className="hero-section">
                     <h1 className="hero-title">Know Your Face Shape</h1>
-                    <p className="hero-subtitle">
-                        Upload a photo or use your camera for AI recommendations.
-                    </p>
+                    <p className="hero-subtitle">Upload a photo or use your camera for AI recommendations.</p>
                     <div className="action-buttons">
                         <button className="btn-outline" onClick={() => fileInputRef.current?.click()}>
                             <i className="ri-image-add-line" /> Upload
@@ -300,12 +293,7 @@ const FaceScanPage = () => {
             {phase === 'loading' && <Loader />}
 
             {phase === 'result' && result && (
-                <ResultView
-                    result={result}
-                    capturedImg={capturedImg}
-                    recommendations={recommendations}
-                    onReset={reset}
-                />
+                <ResultView result={result} capturedImg={capturedImg} recommendations={recommendations} onReset={reset} />
             )}
 
             {error && <div className="error-toast" onClick={() => setError(null)}>{error}</div>}
