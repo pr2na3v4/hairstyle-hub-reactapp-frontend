@@ -1,148 +1,265 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, {
+    useState,
+    useRef,
+    useEffect,
+    useCallback,
+    useMemo,
+} from 'react';
 import { Card } from '../components/cards';
 import './FaceScanPage.css';
 import Loader from '../components/Loader';
 
-// ─── Constants ───────────────────────────────────────────────────────────────
-const AI_API = "https://hairstyle-hub-backend-ai.onrender.com";
-const DB_API = "https://hairstyle-hub-backend.onrender.com";
+// ─── Configuration ────────────────────────────────────────────────────────────
+const AI_API = 'https://hairstyle-hub-backend-ai.onrender.com';
+const DB_API  = 'https://hairstyle-hub-backend.onrender.com';
+const LENGTH_FILTERS = ['All', 'Short', 'Medium', 'Long'];
+const ERROR_DISMISS_MS = 5000;
 
-// Map Oblong → Oval for DB queries (Mongoose schema uses Oval)
-const toDbShape = (shape) => shape === "Oblong" ? "Oval" : shape;
+// FIX #3: Mongoose schema stores "Oval"; map AI's "Oblong" before querying
+const toDbShape = (shape) => (shape === 'Oblong' ? 'Oval' : shape);
 
-// ─── FaceScanPage ─────────────────────────────────────────────────────────────
-const FaceScanPage = () => {
-    const [phase, setPhase]                 = useState('idle');       // idle | camera | loading | result
-    const [result, setResult]               = useState(null);
+// ─── API Layer ────────────────────────────────────────────────────────────────
+const analyzeFace = async (fileSource) => {
+    const body = new FormData();
+    body.append('file', fileSource);
+    const res = await fetch(`${AI_API}/analyze-face`, { method: 'POST', body });
+    if (!res.ok) throw new Error(`AI server error ${res.status}`);
+    return res.json(); // { status, detected_shape, confidence, message? }
+};
+
+// FIX #5: Returns [] on failure — DB outage never crashes the UI
+const fetchHaircutsByShape = async (shape) => {
+    try {
+        const res = await fetch(`${DB_API}/api/haircuts`);
+        if (!res.ok) throw new Error(`DB error ${res.status}`);
+        const all = await res.json();
+        const dbShape = toDbShape(shape);
+        return all.filter(
+            (h) => Array.isArray(h.faceShape) && h.faceShape.includes(dbShape)
+        );
+    } catch (err) {
+        console.error('DB fetch failed:', err);
+        return [];
+    }
+};
+
+// ─── Custom Hook ──────────────────────────────────────────────────────────────
+const useFaceScan = () => {
+    const [phase, setPhase]                     = useState('idle'); // idle | camera | loading | result
+    const [result, setResult]                   = useState(null);
     const [recommendations, setRecommendations] = useState([]);
-    const [error, setError]                 = useState(null);
+    const [capturedImg, setCapturedImg]         = useState(null);
+    const [error, setError]                     = useState(null);
 
-    const videoRef    = useRef(null);
-    const canvasRef   = useRef(null);
-    const fileInputRef= useRef(null);
-    const streamRef   = useRef(null);   // FIX: ref instead of state — avoids stale-closure bug
+    const videoRef     = useRef(null);
+    const canvasRef    = useRef(null);
+    const fileInputRef = useRef(null);
+    const streamRef    = useRef(null);  // Holds live MediaStream — ref avoids stale-closure bugs
+    // FIX #11: Track loading with a ref so handleAnalysis never needs `phase` as a dep,
+    //          keeping the function reference stable across phase changes
+    const isLoadingRef = useRef(false);
 
-    // ── Camera helpers ────────────────────────────────────────────────────────
+    // ── Camera ────────────────────────────────────────────────────────────────
     const stopCamera = useCallback(() => {
-        // FIX: use streamRef so we always have the live stream object, not a stale state copy
-        if (streamRef.current) {
-            streamRef.current.getTracks().forEach(t => t.stop());
-            streamRef.current = null;
-        }
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
         if (videoRef.current) videoRef.current.srcObject = null;
     }, []);
 
-    // Stop camera on unmount
+    // Guaranteed cleanup on unmount
     useEffect(() => () => stopCamera(), [stopCamera]);
 
-    const startCamera = async () => {
-        setPhase('camera');
-        setResult(null);
+    // FIX #14: Auto-dismiss error toast after 5 s
+    useEffect(() => {
+        if (!error) return;
+        const id = setTimeout(() => setError(null), ERROR_DISMISS_MS);
+        return () => clearTimeout(id);
+    }, [error]);
+
+    // FIX #1: Stable reference via useCallback
+    // FIX #6: Clears stale error before opening camera
+    const startCamera = useCallback(async () => {
         setError(null);
+        setPhase('camera');
         try {
-            const userStream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
             });
-            streamRef.current = userStream;
-            if (videoRef.current) videoRef.current.srcObject = userStream;
+            streamRef.current = stream;
+            if (videoRef.current) videoRef.current.srcObject = stream;
         } catch {
-            setError("Camera access denied. Please allow camera permission and try again.");
+            setError('Camera access denied. Please allow camera permission and try again.');
             setPhase('idle');
         }
-    };
+    }, []);
 
-    // ── Canvas capture ────────────────────────────────────────────────────────
-    const captureFromCamera = () => {
+    // ── Analysis ──────────────────────────────────────────────────────────────
+    // FIX #11: Stable reference — isLoadingRef replaces `phase` as the duplicate-call guard
+    const handleAnalysis = useCallback(async (fileSource) => {
+        if (isLoadingRef.current) return;
+        isLoadingRef.current = true;
+
+        setPhase('loading');
+        setError(null);
+        stopCamera();
+
+        // FIX #4 + #15: Reset so the same file can be re-selected next time
+        if (fileInputRef.current) fileInputRef.current.value = '';
+
+        try {
+            const aiData = await analyzeFace(fileSource);
+            if (aiData.status === 'success') {
+                const cuts = await fetchHaircutsByShape(aiData.detected_shape);
+                setResult(aiData);
+                setRecommendations(cuts);
+                setPhase('result');
+            } else {
+                setError(aiData.message || 'Analysis failed. Try a clearer, well-lit photo.');
+                setPhase('idle');
+            }
+        } catch {
+            setError('Server is warming up — please try again in 15 seconds.');
+            setPhase('idle');
+        } finally {
+            // Always unlock so subsequent attempts can proceed
+            isLoadingRef.current = false;
+        }
+    }, [stopCamera]); // stopCamera is stable → handleAnalysis is now stable too
+
+    // FIX #2: Stable useCallback with correct dep (handleAnalysis)
+    // FIX #16: Guards against a 0×0 canvas when stream isn't ready yet
+    const captureFromCamera = useCallback(() => {
         const video  = videoRef.current;
         const canvas = canvasRef.current;
-        const ctx    = canvas.getContext('2d');
+        if (!video || !canvas) return;
 
+        if (!video.videoWidth || !video.videoHeight) {
+            setError('Camera is still starting — please try again in a moment.');
+            return;
+        }
+
+        const ctx = canvas.getContext('2d');
         canvas.width  = video.videoWidth;
         canvas.height = video.videoHeight;
 
-        // FIX: save/restore wraps the mirror transform so it doesn't stack on repeat captures
+        // Draw mirrored so the blob matches the viewfinder preview
         ctx.save();
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
         ctx.drawImage(video, 0, 0);
         ctx.restore();
 
+        // Capture preview + send blob in one pass — never call toBlob twice
+        setCapturedImg(canvas.toDataURL('image/jpeg'));
         canvas.toBlob((blob) => handleAnalysis(blob), 'image/jpeg', 0.9);
-    };
+    }, [handleAnalysis]);
 
-    // ── API + DB flow ─────────────────────────────────────────────────────────
-    const fetchHaircuts = async (shape) => {
-        try {
-            const res = await fetch(`${DB_API}/api/haircuts`);
-            if (!res.ok) throw new Error(`DB error ${res.status}`);
-            const all = await res.json();
-            return all.filter(h => Array.isArray(h.faceShape) && h.faceShape.includes(toDbShape(shape)));
-        } catch (err) {
-            console.error("Database fetch failed:", err);
-            return [];
-        }
-    };
-
-    const handleAnalysis = async (fileSource) => {
-        setPhase('loading');
-        setError(null);
-
-        // FIX: stop camera here — streamRef always has the live ref, no stale closure
-        stopCamera();
-
-        const formData = new FormData();
-        formData.append('file', fileSource);
-
-        // FIX: reset file input so the same file can be re-selected
-        if (fileInputRef.current) fileInputRef.current.value = "";
-
-        try {
-            const response = await fetch(`${AI_API}/analyze-face`, {
-                method: 'POST',
-                body: formData
-            });
-
-            // FIX: check HTTP status before attempting JSON parse
-            if (!response.ok) throw new Error(`Server error ${response.status}`);
-
-            const aiData = await response.json();
-
-            if (aiData.status === "success") {
-                const cuts = await fetchHaircuts(aiData.detected_shape);
-                setResult(aiData);
-                setRecommendations(cuts);
-                setPhase('result');
-            } else {
-                setError(aiData.message || "Analysis failed. Try a clearer, well-lit photo.");
-                setPhase('idle');
-            }
-        } catch (err) {
-            console.error("Analysis error:", err);
-            setError("Server is warming up — please try again in 15 seconds.");
-            setPhase('idle');
-        }
-    };
-
-    const handleReset = () => {
+    // FIX #17 + #18: Stable useCallback that clears ALL state including recommendations
+    const reset = useCallback(() => {
+        setPhase('idle');
         setResult(null);
         setRecommendations([]);
+        setCapturedImg(null);
         setError(null);
-        setPhase('idle');
-    };
+    }, []);
 
-    // ── Render ────────────────────────────────────────────────────────────────
+    return {
+        phase, result, recommendations, capturedImg, error,
+        videoRef, canvasRef, fileInputRef,
+        startCamera, stopCamera, captureFromCamera, handleAnalysis, reset, setError,
+    };
+};
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+const FilterChips = ({ active, onChange }) => (
+    <div className="filter-section">
+        <h4 className="section-heading">Filter by Length</h4>
+        <div className="chips-container">
+            {LENGTH_FILTERS.map((f) => (
+                <button
+                    key={f}
+                    onClick={() => onChange(f)}
+                    className={`chip${active === f ? ' active' : ''}`}
+                >
+                    {f}
+                </button>
+            ))}
+        </div>
+    </div>
+);
+
+const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
+    const [filter, setFilter] = useState('All');
+
+    const filteredItems = useMemo(
+        () =>
+            filter === 'All'
+                ? recommendations
+                : recommendations.filter((h) => h.hairLength === filter),
+        [recommendations, filter]
+    );
+
+    return (
+        <div className="results-wrapper animate-fade-in">
+            <section className="analysis-hero">
+                <div className="user-scan-card">
+                    <div className="captured-image-container">
+                        <img src={capturedImg} alt="Your face scan" className="user-face-print" />
+                        <div className="scan-overlay-label">AI Analysis</div>
+                    </div>
+                    <div className="result-details">
+                        <h2 className="result-label">Analysis Complete</h2>
+                        <h3 className="detected-shape">{result.detected_shape}</h3>
+                        <p className="confidence-text">
+                            Confidence: <span>{result.confidence}</span>
+                        </p>
+                        <button onClick={onReset} className="reset-btn">Try Again</button>
+                    </div>
+                </div>
+            </section>
+
+            <FilterChips active={filter} onChange={setFilter} />
+
+            <section className="recommendations-section">
+                {filteredItems.length > 0 ? (
+                    <div className="haircut-grid">
+                        {filteredItems.map((h) => (
+                            <Card key={h._id} {...h} />
+                        ))}     
+                    </div>
+                ) : (
+                    <p className="empty-state">
+                        No {filter !== 'All' ? `${filter.toLowerCase()} ` : ''}styles found for your face shape.
+                    </p>
+                )}
+            </section>
+        </div>
+    );
+};
+
+// ─── Page Component ───────────────────────────────────────────────────────────
+const FaceScanPage = () => {
+    // FIX #19: Multi-line destructuring for readability
+    const {
+        phase, result, recommendations, capturedImg, error,
+        videoRef, canvasRef, fileInputRef,
+        startCamera, stopCamera, captureFromCamera, handleAnalysis, reset, setError,
+    } = useFaceScan();
+
     return (
         <div className="facescan-page">
 
-            {/* ── HERO (idle) ── */}
+            {/* ── Idle ── */}
             {phase === 'idle' && (
                 <section className="hero-section">
                     <h1 className="hero-title">Know Your Face Shape</h1>
+                    {/* FIX #20: Subtitle restored */}
                     <p className="hero-subtitle">
                         Upload a photo or use your camera for AI-powered hairstyle recommendations.
                     </p>
                     <div className="action-buttons">
-                        <button className="btn-outline" onClick={() => fileInputRef.current.click()}>
+                        <button className="btn-outline" onClick={() => fileInputRef.current?.click()}>
                             <i className="ri-image-add-line" /> Upload Image
                         </button>
                         <button className="btn-primary" onClick={startCamera}>
@@ -162,7 +279,8 @@ const FaceScanPage = () => {
                 </section>
             )}
 
-            {/* ── CAMERA ── */}
+            {/* ── Camera ── */}
+            {/* FIX #7 #8 #9 #10: Restored camera-viewfinder, oval overlay, and scanner-actions wrappers */}
             {phase === 'camera' && (
                 <section className="scanner-container">
                     <div className="camera-viewfinder">
@@ -172,55 +290,35 @@ const FaceScanPage = () => {
                         </div>
                     </div>
                     <div className="scanner-actions">
-                        <button onClick={captureFromCamera} className="capture-btn" aria-label="Capture photo" />
-                        <button onClick={() => { stopCamera(); setPhase('idle'); }} className="text-btn">
+                        <button
+                            onClick={captureFromCamera}
+                            className="capture-btn"
+                            aria-label="Capture photo"
+                        />
+                        <button
+                            onClick={() => { stopCamera(); reset(); }}
+                            className="text-btn"
+                        >
                             Cancel
                         </button>
                     </div>
                 </section>
             )}
 
-            {/* ── LOADING ── */}
-            {phase === 'loading' && (
-                <Loader/>
-            )}
+            {/* ── Loading ── */}
+            {phase === 'loading' && <Loader />}
 
-            {/* ── RESULT ── */}
+            {/* ── Result ── */}
             {phase === 'result' && result && (
-                <div className="results-wrapper">
-                    <section className="result-card">
-                        <h2 className="result-label">Analysis Complete</h2>
-                        <h3 className="detected-shape">{result.detected_shape}</h3>
-                        <p className="confidence-text">
-                            AI Confidence: <span>{result.confidence}</span>
-                        </p>
-                        <button className="reset-btn" onClick={handleReset}>
-                            Try Another Photo
-                        </button>
-                    </section>
-
-                    <section className="recommendations-section">
-                        <h4 className="section-heading">Recommended Hairstyles</h4>
-                        <div className="haircut-grid">
-                            {recommendations.length > 0 ? (
-                                recommendations.map(haircut => (
-                                    <Card
-                                        key={haircut._id}
-                                        id={haircut._id}
-                                        name={haircut.name}
-                                        imageUrl={haircut.imageUrl}
-                                        description={haircut.haircutType}
-                                    />
-                                ))
-                            ) : (
-                                <p className="empty-msg">No hairstyles found for {result.detected_shape} face shape.</p>
-                            )}
-                        </div>
-                    </section>
-                </div>
+                <ResultView
+                    result={result}
+                    capturedImg={capturedImg}
+                    recommendations={recommendations}
+                    onReset={reset}
+                />
             )}
 
-            {/* ── ERROR TOAST ── */}
+            {/* ── Error toast ── */}
             {error && (
                 <div className="error-toast" role="alert" onClick={() => setError(null)}>
                     {error}

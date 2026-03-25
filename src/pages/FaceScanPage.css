@@ -1,16 +1,31 @@
-/* Premium Monochrome Theme */
+/* ─── Design Tokens ──────────────────────────────────────────────────────────
+   Single source of truth. All colours, shadows, and radii live here.
+   ─────────────────────────────────────────────────────────────────────────── */
 :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f9f9f9;
-    --text-main: #111111;
-    --text-muted: #666666;
-    --accent: #000000;
-    --border-light: #eeeeee;
-    --border-bold: #111111;
-    --premium-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+    --bg-primary:      #ffffff;
+    --bg-secondary:    #f9f9f9;
+    --text-main:       #111111;
+    --text-muted:      #666666;
+    --accent:          #000000;
+    --accent-hover:    #333333;
+    --border-light:    #eeeeee;
+    --border-bold:     #111111;
+    --shadow-card:     0 10px 30px rgba(0, 0, 0, 0.05);
+    --radius-sm:       4px;
+    --radius-md:       8px;
+    --radius-lg:       12px;
+    --radius-xl:       20px;
+    --radius-pill:     1000px;
+    --transition:      all 0.25s ease;
 }
 
-/* Container & Global Font */
+/* ─── Animations ─────────────────────────────────────────────────────────── */
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Page Shell ─────────────────────────────────────────────────────────── */
 .facescan-page {
     max-width: 1200px;
     margin: 0 auto;
@@ -21,17 +36,14 @@
     background-color: var(--bg-primary);
 }
 
-/* Animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(15px); }
-    to { opacity: 1; transform: translateY(0); }
+/* All top-level phase sections animate in consistently */
+.hero-section,
+.scanner-container,
+.animate-fade-in {
+    animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.hero-section, .results-wrapper, .scanner-container {
-    animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-/* Hero Section Styles */
+/* ─── Hero Section ───────────────────────────────────────────────────────── */
 .hero-section {
     text-align: center;
     margin-bottom: clamp(3rem, 10vw, 5rem);
@@ -42,24 +54,24 @@
     font-weight: 800;
     margin-bottom: 1.5rem;
     letter-spacing: -0.04em;
-    color: var(--text-main);
     text-transform: uppercase;
+    color: var(--text-main);
 }
 
 .hero-subtitle {
     font-size: clamp(1rem, 2vw, 1.25rem);
     color: var(--text-muted);
     max-width: 600px;
-    margin: 0 auto 3rem auto;
+    margin: 0 auto 3rem;
     line-height: 1.6;
 }
 
-/* Buttons - High Contrast Styling */
+/* ─── Buttons ────────────────────────────────────────────────────────────── */
 .action-buttons {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 1.25rem;
+    gap: 1rem;
 }
 
 @media (min-width: 640px) {
@@ -69,37 +81,38 @@
     }
 }
 
-.btn-primary, .btn-outline {
-    width: 100%;
-    max-width: 280px;
-    padding: 1.25rem;
-    border-radius: 4px; /* Sharper edges for premium look */
-    font-weight: 600;
-    cursor: pointer;
-    transition: all 0.3s ease;
-    display: flex;
+.btn-primary,
+.btn-outline {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.75rem;
-    font-size: 0.9rem;
-    text-transform: uppercase;
+    gap: 0.6rem;
+    width: 100%;
+    max-width: 260px;
+    padding: 1.1rem 1.5rem;
+    border-radius: var(--radius-sm);   /* Sharp = premium */
+    font-weight: 600;
+    font-size: 0.85rem;
     letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
 .btn-primary {
     background-color: var(--accent);
-    color: white;
+    color: #ffffff;
     border: 1px solid var(--accent);
 }
 
 .btn-primary:hover {
-    background-color: #333;
+    background-color: var(--accent-hover);
     transform: translateY(-2px);
 }
 
 .btn-outline {
     background-color: transparent;
-    color: var(--accent);
+    color: var(--text-main);
     border: 1px solid var(--border-light);
 }
 
@@ -108,36 +121,36 @@
     background-color: #f5f5f5;
 }
 
-/* Scanner Styles - Minimalist Viewfinder */
+/* ─── Camera / Scanner ───────────────────────────────────────────────────── */
 .scanner-container {
-    max-width: 450px;
+    max-width: 420px;
     margin: 0 auto;
     text-align: center;
 }
 
 .camera-viewfinder {
     position: relative;
-    border-radius: 0.5rem;
-    overflow: hidden;
+    width: 100%;
+    aspect-ratio: 3 / 4;
     background-color: #000;
-    aspect-ratio: 3/4;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
     border: 1px solid var(--border-light);
-    box-shadow: var(--premium-shadow);
+    box-shadow: var(--shadow-card);
 }
 
 .camera-video {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transform: scaleX(-1);
-    filter: grayscale(20%); /* Subtle premium aesthetic */
+    transform: scaleX(-1);         /* Mirror so it feels like a selfie camera */
+    filter: grayscale(15%);        /* Subtle monochrome aesthetic */
 }
 
-/* Face Guideline Overlay */
 .face-guideline {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.6) 100%);
+    background: radial-gradient(circle, transparent 40%, rgba(0, 0, 0, 0.55) 100%);
     pointer-events: none;
     display: flex;
     align-items: center;
@@ -145,59 +158,142 @@
 }
 
 .oval-guide {
-    width: 70%;
-    height: 70%;
+    width: 68%;
+    height: 68%;
     border: 1.5px solid rgba(255, 255, 255, 0.8);
-    border-radius: 1000px;
+    border-radius: var(--radius-pill);
+}
+
+.scanner-actions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 2rem;
 }
 
 .capture-btn {
-    margin-top: 2.5rem;
-    background-color: var(--accent);
-    color: white;
     width: 70px;
     height: 70px;
     border-radius: 50%;
-    border: 4px solid white;
-    cursor: pointer;
+    border: 4px solid #ffffff;
+    background-color: var(--accent);
     box-shadow: 0 0 0 2px var(--accent);
-    transition: transform 0.2s ease;
+    cursor: pointer;
+    transition: transform 0.15s ease;
 }
 
 .capture-btn:active {
     transform: scale(0.9);
 }
 
-/* Results Styles - Clean Cards */
-.result-card {
-    background-color: var(--bg-secondary);
-    padding: 3rem 1.5rem;
-    border-radius: 0.5rem;
-    text-align: center;
+.text-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    cursor: pointer;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    transition: color 0.2s ease;
+}
+
+.text-btn:hover {
+    color: var(--text-main);
+}
+
+/* ─── Results Layout ─────────────────────────────────────────────────────── */
+.results-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 3rem;
+}
+
+.analysis-hero {
+    /* Wraps the scan card; allows future layout additions */
+}
+
+.user-scan-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2rem;
+    padding: 2.5rem 2rem;
+    background: var(--bg-primary);
     border: 1px solid var(--border-light);
-    margin-bottom: 4rem;
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-card);
+}
+
+@media (min-width: 640px) {
+    .user-scan-card {
+        flex-direction: row;
+        text-align: left;
+    }
+}
+
+/* ─── Captured Image Portrait ────────────────────────────────────────────── */
+.captured-image-container {
+    position: relative;
+    flex-shrink: 0;
+    width: 160px;
+    height: 160px;
+}
+
+.user-face-print {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid var(--accent);   /* Monochrome — no blue */
+}
+
+.scan-overlay-label {
+    position: absolute;
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--accent);          /* Monochrome — was blue */
+    color: #ffffff;
+    padding: 3px 12px;
+    border-radius: var(--radius-pill);
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+/* ─── Result Details ─────────────────────────────────────────────────────── */
+.result-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
 }
 
 .result-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.2em;
-    margin-bottom: 1rem;
+    margin-bottom: 0.5rem;
 }
 
 .detected-shape {
     font-size: clamp(2rem, 5vw, 3rem);
     font-weight: 800;
-    color: var(--text-main);
+    letter-spacing: -0.03em;
     text-transform: capitalize;
+    color: var(--text-main);
+    line-height: 1;
 }
 
 .confidence-text {
-    font-size: 1rem;
+    font-size: 0.95rem;
     color: var(--text-muted);
-    margin-top: 0.5rem;
+    margin-top: 0.25rem;
 }
 
 .confidence-text span {
@@ -206,181 +302,129 @@
 }
 
 .reset-btn {
-    margin-top: 2rem;
+    margin-top: 1.5rem;
     background: none;
     border: none;
     color: var(--text-muted);
+    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
     text-decoration: underline;
-    text-underline-offset: 4px;
+    text-underline-offset: 3px;
+    padding: 0;
+    transition: color 0.2s ease;
+    align-self: flex-start;
 }
 
 .reset-btn:hover {
     color: var(--text-main);
 }
 
-/* Recommendations Grid */
+/* ─── Filter Chips ───────────────────────────────────────────────────────── */
+.filter-section {
+    text-align: center;
+}
+
 .section-heading {
-    font-size: 1.5rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    margin-bottom: 2.5rem;
-    text-align: center;
+    color: var(--text-muted);
     text-transform: uppercase;
-    letter-spacing: 0.05em;
+    letter-spacing: 0.18em;
+    margin-bottom: 1rem;
 }
 
-.haircut-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: 2rem;
+.chips-container {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.6rem;
 }
 
-/* Error Toast */
-.error-toast {
-    margin-top: 2rem;
-    padding: 1.25rem;
-    background-color: #fff;
-    color: var(--text-main);
-    border: 1px solid var(--accent);
-    border-radius: 4px;
-    text-align: center;
-    font-weight: 600;
+.chip {
+    padding: 0.5rem 1.4rem;
+    border-radius: var(--radius-pill);
+    border: 1px solid var(--border-light);
+    background: var(--bg-primary);
+    color: var(--text-muted);
     font-size: 0.85rem;
-}
-:root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #fbfbfb;
-    --text-main: #111111;
-    --text-muted: #666666;
-    --accent: #000000;
-    --border-light: #eeeeee;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
 }
 
-.facescan-page {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: clamp(1rem, 5vw, 4rem) 1rem;
-    font-family: 'Inter', sans-serif;
+.chip:hover:not(.active) {
+    border-color: var(--accent);
+    color: var(--text-main);
 }
 
-/* --- GRID SYSTEM --- */
+.chip.active {
+    background: var(--accent);          /* Monochrome — was blue */
+    color: #ffffff;
+    border-color: var(--accent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+}
+
+/* ─── Recommendations Grid ───────────────────────────────────────────────── */
+.recommendations-section {
+    /* Wrapper for the grid and empty state */
+}
+
 .haircut-grid {
     display: grid;
-    /* Default: 2 columns on mobile for better visibility */
-    grid-template-columns: repeat(2, 1fr); 
-    gap: 15px; /* Tight gap for mobile */
-    width: 100%;
+    grid-template-columns: repeat(2, 1fr);   /* 2-col base for mobile */
+    gap: 1rem;
 }
 
-/* Ensure images inside Card component look correct */
-.haircut-grid .card-image-wrapper, 
-.haircut-grid img {
-    width: 100%;
-    aspect-ratio: 1 / 1; /* Keep images square and consistent */
-    object-fit: cover;
-    border-radius: 8px;
-}
-
-@media (min-width: 768px) {
+@media (min-width: 640px) {
     .haircut-grid {
         grid-template-columns: repeat(3, 1fr);
-        gap: 30px;
+        gap: 1.5rem;
     }
 }
 
 @media (min-width: 1024px) {
     .haircut-grid {
         grid-template-columns: repeat(4, 1fr);
+        gap: 2rem;
     }
 }
 
-/* --- SCANNER UPGRADES --- */
-.camera-viewfinder {
-    position: relative;
+/* Consistent image sizing inside Card components */
+.haircut-grid .card-image-wrapper,
+.haircut-grid img {
     width: 100%;
-    max-width: 400px;
-    aspect-ratio: 3/4;
-    background: #000;
-    margin: 0 auto;
-    border-radius: 20px;
-    overflow: hidden;
-}
-
-.camera-video {
-    width: 100%;
-    height: 100%;
+    aspect-ratio: 1 / 1;
     object-fit: cover;
-    transform: scaleX(-1);
+    border-radius: var(--radius-md);
 }
 
-.scanner-actions {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.capture-btn {
-    width: 70px;
-    height: 70px;
-    border-radius: 50%;
-    border: 5px solid #fff;
-    background: var(--accent);
-    box-shadow: 0 0 0 2px var(--accent);
-    cursor: pointer;
-}
-
-/* --- RESULT CARD --- */
-.result-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-light);
-    padding: 2rem;
-    border-radius: 12px;
+/* Empty state — shown when no haircuts match the active filter */
+.empty-state {
     text-align: center;
-    margin-bottom: 3rem;
+    padding: 20px;
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 500;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--radius-lg);
 }
 
-.detected-shape {
-    font-size: 2.5rem;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: -1px;
-}
-
-/* --- UI ELEMENTS --- */
-.action-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-@media (min-width: 640px) {
-    .action-buttons { flex-direction: row; justify-content: center; }
-}
-
-.btn-primary, .btn-outline {
-    padding: 1rem 2rem;
-    border-radius: 8px;
-    font-weight: 600;
-    cursor: pointer;
-    text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 1px;
-}
-
-.btn-primary { background: #000; color: #fff; border: none; }
-.btn-outline { background: transparent; border: 1px solid #000; }
-
+/* ─── Error Toast ────────────────────────────────────────────────────────── */
+/* Fixed-position — always visible, monochrome, dismissable */
 .error-toast {
     position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: #ff0000;
-    color: #fff;
-    padding: 12px 24px;
-    border-radius: 4px;
+    left: 30%;
+    padding: 20px 30px;
+    background: var(--text-main);
+    color: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
     z-index: 100;
+    white-space: wrap;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    animation: fadeInUp 0.3s ease both;
 }
