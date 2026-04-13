@@ -263,7 +263,7 @@ const FaceScanPage = ({ currentUser, authLoading }) => {
                 text: 'Please login to access the AI Face Scan feature.',
                 icon: 'lock',
                 confirmButtonColor: '#ff4757',
-                confirmButtonText: 'Go to Login',
+                confirmButtonText: 'Go to Loginn',
                 allowOutsideClick: false,
             }).then(() => navigate('/login'));
         }
