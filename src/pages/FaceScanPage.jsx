@@ -12,11 +12,13 @@ import './FaceScanPage.css';
 import Loader from '../components/Loader';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const AI_API = 'https://hairstyle-hub-backend-ai.onrender.com';
-const DB_API  = 'https://hairstyle-hub-backend.onrender.com';
-const LENGTH_FILTERS = ['All', 'Short', 'Medium', 'Long'];
+const AI_API          = 'https://hairstyle-hub-backend-ai.onrender.com';
+const DB_API          = 'https://hairstyle-hub-backend.onrender.com';
+const LENGTH_FILTERS  = ['All', 'Short', 'Medium', 'Long'];
 const ERROR_DISMISS_MS = 5000;
+const SIMILAR_COUNT   = 4;
 
+// Oblong has no separate haircut category in the DB — map to Oval
 const toDbShape = (shape) => (shape === 'Oblong' ? 'Oval' : shape);
 
 // ─── API Layer ────────────────────────────────────────────────────────────────
@@ -45,7 +47,7 @@ const fetchHaircutsByShape = async (shape) => {
 
 // ─── Custom Hook ──────────────────────────────────────────────────────────────
 const useFaceScan = (currentUser) => {
-    const [phase, setPhase]                     = useState('idle'); 
+    const [phase, setPhase]                     = useState('idle');
     const [result, setResult]                   = useState(null);
     const [recommendations, setRecommendations] = useState([]);
     const [capturedImg, setCapturedImg]         = useState(null);
@@ -54,7 +56,7 @@ const useFaceScan = (currentUser) => {
     const videoRef     = useRef(null);
     const canvasRef    = useRef(null);
     const fileInputRef = useRef(null);
-    const streamRef    = useRef(null); 
+    const streamRef    = useRef(null);
     const isLoadingRef = useRef(false);
 
     const stopCamera = useCallback(() => {
@@ -65,6 +67,7 @@ const useFaceScan = (currentUser) => {
 
     useEffect(() => () => stopCamera(), [stopCamera]);
 
+    // Auto-dismiss error toast after ERROR_DISMISS_MS
     useEffect(() => {
         if (!error) return;
         const id = setTimeout(() => setError(null), ERROR_DISMISS_MS);
@@ -72,7 +75,7 @@ const useFaceScan = (currentUser) => {
     }, [error]);
 
     const startCamera = useCallback(async () => {
-        if (!currentUser) return; // Guard
+        if (!currentUser) return;
         setError(null);
         setPhase('camera');
         try {
@@ -98,8 +101,11 @@ const useFaceScan = (currentUser) => {
         if (fileInputRef.current) fileInputRef.current.value = '';
 
         try {
+            // 1. AI analysis — main.py handles data storage server-side
             const aiData = await analyzeFace(fileSource);
+
             if (aiData.status === 'success') {
+                // 2. Fetch matching haircuts from DB
                 const cuts = await fetchHaircutsByShape(aiData.detected_shape);
                 setResult(aiData);
                 setRecommendations(cuts);
@@ -124,7 +130,6 @@ const useFaceScan = (currentUser) => {
         const ctx = canvas.getContext('2d');
         canvas.width  = video.videoWidth;
         canvas.height = video.videoHeight;
-
         ctx.save();
         ctx.translate(canvas.width, 0);
         ctx.scale(-1, 1);
@@ -172,15 +177,27 @@ const FilterChips = ({ active, onChange }) => (
 const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
     const [filter, setFilter] = useState('All');
 
+    // Items matching the active length filter
     const filteredItems = useMemo(
-        () => filter === 'All' ? recommendations : recommendations.filter((h) => h.hairLength === filter),
+        () =>
+            filter === 'All'
+                ? recommendations
+                : recommendations.filter((h) => h.hairLength === filter),
         [recommendations, filter]
     );
 
-    const similarStyles = useMemo(() => {
-        const pool = filter === 'All' ? recommendations : recommendations.filter(h => h.hairLength !== filter);
-        return [...pool].sort(() => 0.5 - Math.random()).slice(0, 4);
-    }, [recommendations, filter]);
+    // "More Styles" — random picks from the full pool, excluding already-shown items
+    // FIX: was using Math.random() inside useMemo which only runs once and never
+    //      reshuffles. Also was pooling from the wrong set (non-matching lengths).
+    //      Now uses useState + useEffect so it re-shuffles when filter or
+    //      recommendations change.
+    const [similarStyles, setSimilarStyles] = useState([]);
+    useEffect(() => {
+        const shownIds = new Set(filteredItems.map((h) => h._id));
+        const pool     = recommendations.filter((h) => !shownIds.has(h._id));
+        const shuffled = [...pool].sort(() => Math.random() - 0.5);
+        setSimilarStyles(shuffled.slice(0, SIMILAR_COUNT));
+    }, [filteredItems, recommendations]);
 
     return (
         <div className="results-wrapper animate-fade-in">
@@ -193,7 +210,9 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
                     <div className="result-details">
                         <h2 className="result-label">Analysis Complete</h2>
                         <h3 className="detected-shape">{result.detected_shape}</h3>
-                        <p className="confidence-text">Confidence: <span>{result.confidence}</span></p>
+                        <p className="confidence-text">
+                            Confidence: <span>{result.confidence}</span>
+                        </p>
                         <button onClick={onReset} className="reset-btn">Try Again</button>
                     </div>
                 </div>
@@ -202,11 +221,14 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
             <FilterChips active={filter} onChange={setFilter} />
 
             <section className="recommendations-section">
-                <h4 className="grid-title">Top {filter !== 'All' ? filter : ''} Picks</h4>
+                <h4 className="grid-title">
+                    Top {filter !== 'All' ? filter : ''} Picks
+                </h4>
                 <div className="cards-grid">
                     {filteredItems.map((h) => (
-                        <Card key={h._id?.$oid || h._id} id={h._id?.$oid || h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
-                    ))}     
+                        // FIX: removed h._id?.$oid fallback — Mongoose returns plain string _id
+                        <Card key={h._id} id={h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
+                    ))}
                 </div>
             </section>
 
@@ -216,7 +238,7 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
                     <h4 className="grid-title">More Styles for {result.detected_shape} Faces</h4>
                     <div className="cards-grid">
                         {similarStyles.map((h) => (
-                            <Card key={h._id?.$oid || h._id} id={h._id?.$oid || h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
+                            <Card key={h._id} id={h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
                         ))}
                     </div>
                 </section>
@@ -234,7 +256,6 @@ const FaceScanPage = ({ currentUser, authLoading }) => {
         startCamera, stopCamera, captureFromCamera, handleAnalysis, reset, setError,
     } = useFaceScan(currentUser);
 
-    // 1. User Check Logic
     useEffect(() => {
         if (!authLoading && !currentUser) {
             Swal.fire({
@@ -243,22 +264,22 @@ const FaceScanPage = ({ currentUser, authLoading }) => {
                 icon: 'lock',
                 confirmButtonColor: '#ff4757',
                 confirmButtonText: 'Go to Login',
-                allowOutsideClick: false
-            }).then(() => {
-                navigate('/login');
-            });
+                allowOutsideClick: false,
+            }).then(() => navigate('/login'));
         }
     }, [currentUser, authLoading, navigate]);
 
     if (authLoading) return <Loader />;
-    if (!currentUser) return null; // Prevent UI flicker before redirect
+    if (!currentUser) return null;
 
     return (
         <div className="facescan-page">
             {phase === 'idle' && (
                 <section className="hero-section">
                     <h1 className="hero-title">Know Your Face Shape</h1>
-                    <p className="hero-subtitle">Upload a photo or use your camera for AI recommendations.</p>
+                    <p className="hero-subtitle">
+                        Upload a photo or use your camera for AI recommendations.
+                    </p>
                     <div className="action-buttons">
                         <button className="btn-outline" onClick={() => fileInputRef.current?.click()}>
                             <i className="ri-image-add-line" /> Upload
@@ -281,11 +302,18 @@ const FaceScanPage = ({ currentUser, authLoading }) => {
                 <section className="scanner-container">
                     <div className="camera-viewfinder">
                         <video ref={videoRef} autoPlay playsInline className="camera-video" />
-                        <div className="face-guideline"><div className="oval-guide" /></div>
+                        <div className="face-guideline">
+                            <div className="oval-guide" />
+                        </div>
                     </div>
                     <div className="scanner-actions">
                         <button onClick={captureFromCamera} className="capture-btn" />
-                        <button onClick={() => { stopCamera(); reset(); }} className="text-btn">Cancel</button>
+                        <button
+                            onClick={() => { stopCamera(); reset(); }}
+                            className="text-btn"
+                        >
+                            Cancel
+                        </button>
                     </div>
                 </section>
             )}
@@ -293,10 +321,20 @@ const FaceScanPage = ({ currentUser, authLoading }) => {
             {phase === 'loading' && <Loader />}
 
             {phase === 'result' && result && (
-                <ResultView result={result} capturedImg={capturedImg} recommendations={recommendations} onReset={reset} />
+                <ResultView
+                    result={result}
+                    capturedImg={capturedImg}
+                    recommendations={recommendations}
+                    onReset={reset}
+                />
             )}
 
-            {error && <div className="error-toast" onClick={() => setError(null)}>{error}</div>}
+            {error && (
+                <div className="error-toast" onClick={() => setError(null)}>
+                    {error}
+                </div>
+            )}
+
             <canvas ref={canvasRef} style={{ display: 'none' }} />
         </div>
     );
