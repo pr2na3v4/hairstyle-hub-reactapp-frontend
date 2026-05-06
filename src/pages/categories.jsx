@@ -1,81 +1,64 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query'; // Import Hook
 import { Card } from '../components/cards';
 import Loader from '../components/Loader';
 import './categories.css';
 
+// Fetch function (Same as Home.js to reuse the cache)
+const fetchHaircuts = async () => {
+  const response = await fetch('https://hairstyle-hub-backend.onrender.com/api/haircuts');
+  if (!response.ok) throw new Error('Network response was not ok');
+  return response.json();
+};
+
 const Categories = () => {
   const location = useLocation();
-  const [data, setData] = useState([]);
-  const [filteredData, setFilteredData] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showLoader, setShowLoader] = useState(false); // 👈 Delayed loader state
+  
+  // --- States ---
   const [searchTerm, setSearchTerm] = useState('');
   const [filters, setFilters] = useState({ length: '', face: '', tag: '' });
 
-  // --- Delayed Loader Logic ---
-  useEffect(() => {
-    let timeout;
-    if (loading) {
-      timeout = setTimeout(() => setShowLoader(true), 800);
-    } else {
-      setShowLoader(false);
-    }
-    return () => clearTimeout(timeout);
-  }, [loading]);
+  // --- TanStack Query Implementation ---
+  const { data: haircuts = [], isLoading } = useQuery({
+    queryKey: ['haircuts'], // Uses same key as Home to get data from cache
+    queryFn: fetchHaircuts,
+    staleTime: 1000 * 60 * 60, // 1 Hour
+  });
 
-  // 1. Fetch data & Check for state passed from Home.jsx
+  // Handle incoming filter state from Home page (e.g., clicking 'Oval')
   useEffect(() => {
     if (location.state && location.state.selectedShape) {
       setFilters(prev => ({ ...prev, face: location.state.selectedShape }));
     }
-
-    setLoading(true);
-    fetch('https://hairstyle-hub-backend.onrender.com/api/haircuts')
-      .then(res => res.json())
-      .then(json => {
-        setData(json);
-        setFilteredData(json);
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error(err);
-        setLoading(false);
-      });
   }, [location.state]);
 
-  // 2. Filter Logic
-// 2. Filter Logic
-useEffect(() => {
-  let result = data.filter(item => {
-    // Check if search term matches Name OR any of the Tags
-    const searchLower = searchTerm.toLowerCase();
-    
-    const matchName = item.name.toLowerCase().includes(searchLower);
-    
-    // Tags search logic: check if search term exists in any tag
-    const matchTagsInSearch = item.tags && item.tags.some(tag => 
-      tag.toLowerCase().includes(searchLower)
-    );
+  // --- Optimized Filter Logic ---
+  // useMemo ensures we only re-calculate when haircuts, search, or filters change
+  const filteredData = useMemo(() => {
+    return haircuts.filter(item => {
+      const searchLower = searchTerm.toLowerCase();
+      
+      const matchName = item.name?.toLowerCase().includes(searchLower);
+      const matchTagsInSearch = item.tags && item.tags.some(tag => 
+        tag.toLowerCase().includes(searchLower)
+      );
 
-    const matchSearch = matchName || matchTagsInSearch; // Donhi paiki ek hi asel tar true
-
-    const matchLength = filters.length ? item.hairLength === filters.length : true;
-    const matchFace = filters.face ? (item.faceShape && item.faceShape.includes(filters.face)) : true;
-    const matchTag = filters.tag ? (item.tags && item.tags.includes(filters.tag)) : true;
-    
-    return matchSearch && matchLength && matchFace && matchTag;
-  });
-  setFilteredData(result);
-}, [searchTerm, filters, data]);
+      const matchSearch = matchName || matchTagsInSearch;
+      const matchLength = filters.length ? item.hairLength === filters.length : true;
+      const matchFace = filters.face ? (item.faceShape && item.faceShape.includes(filters.face)) : true;
+      const matchTag = filters.tag ? (item.tags && item.tags.includes(filters.tag)) : true;
+      
+      return matchSearch && matchLength && matchFace && matchTag;
+    });
+  }, [searchTerm, filters, haircuts]);
 
   const updateFilter = (type, value) => {
     setFilters(prev => ({ ...prev, [type]: prev[type] === value ? '' : value }));
   };
 
-  // --- Rendering Logic with Safety Checks ---
-  if (showLoader) return <Loader />;
-  if (loading && !showLoader) return null;
+  // If loading and no cache exists, show Loader
+  if (isLoading && haircuts.length === 0) return <Loader />;
 
   return (
     <div className="categories-page">

@@ -6,19 +6,19 @@ import React, {
     useMemo,
 } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query'; // Import Hook
 import Swal from 'sweetalert2';
 import { Card } from '../components/cards';
 import './FaceScanPage.css';
 import Loader from '../components/Loader';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const AI_API          = 'https://hairstyle-hub-backend-ai.onrender.com';
-const DB_API          = 'https://hairstyle-hub-backend.onrender.com';
+const AI_API      = 'https://hairstyle-hub-backend-ai.onrender.com';
+const DB_API      = 'https://hairstyle-hub-backend.onrender.com';
 const LENGTH_FILTERS  = ['All', 'Short', 'Medium', 'Long'];
 const ERROR_DISMISS_MS = 5000;
 const SIMILAR_COUNT   = 4;
 
-// Oblong has no separate haircut category in the DB — map to Oval
 const toDbShape = (shape) => (shape === 'Oblong' ? 'Oval' : shape);
 
 // ─── API Layer ────────────────────────────────────────────────────────────────
@@ -30,26 +30,17 @@ const analyzeFace = async (fileSource) => {
     return res.json();
 };
 
-const fetchHaircutsByShape = async (shape) => {
-    try {
-        const res = await fetch(`${DB_API}/api/haircuts`);
-        if (!res.ok) throw new Error(`DB error ${res.status}`);
-        const all = await res.json();
-        const dbShape = toDbShape(shape);
-        return all.filter(
-            (h) => Array.isArray(h.faceShape) && h.faceShape.includes(dbShape)
-        );
-    } catch (err) {
-        console.error('DB fetch failed:', err);
-        return [];
-    }
+// Standard fetcher used across the app
+const fetchAllHaircuts = async () => {
+    const res = await fetch(`${DB_API}/api/haircuts`);
+    if (!res.ok) throw new Error(`DB error ${res.status}`);
+    return res.json();
 };
 
 // ─── Custom Hook ──────────────────────────────────────────────────────────────
 const useFaceScan = (currentUser) => {
     const [phase, setPhase]                     = useState('idle');
     const [result, setResult]                   = useState(null);
-    const [recommendations, setRecommendations] = useState([]);
     const [capturedImg, setCapturedImg]         = useState(null);
     const [error, setError]                     = useState(null);
 
@@ -59,6 +50,13 @@ const useFaceScan = (currentUser) => {
     const streamRef    = useRef(null);
     const isLoadingRef = useRef(false);
 
+    // --- Caching with TanStack Query ---
+    const { data: allHaircuts = [] } = useQuery({
+        queryKey: ['haircuts'],
+        queryFn: fetchAllHaircuts,
+        staleTime: 1000 * 60 * 60, // Reuse cache for 1 hour
+    });
+
     const stopCamera = useCallback(() => {
         streamRef.current?.getTracks().forEach((t) => t.stop());
         streamRef.current = null;
@@ -67,7 +65,6 @@ const useFaceScan = (currentUser) => {
 
     useEffect(() => () => stopCamera(), [stopCamera]);
 
-    // Auto-dismiss error toast after ERROR_DISMISS_MS
     useEffect(() => {
         if (!error) return;
         const id = setTimeout(() => setError(null), ERROR_DISMISS_MS);
@@ -90,10 +87,18 @@ const useFaceScan = (currentUser) => {
         }
     }, [currentUser]);
 
+    // Compute recommendations locally based on cached data
+    const recommendations = useMemo(() => {
+        if (!result) return [];
+        const dbShape = toDbShape(result.detected_shape);
+        return allHaircuts.filter(
+            (h) => Array.isArray(h.faceShape) && h.faceShape.includes(dbShape)
+        );
+    }, [result, allHaircuts]);
+
     const handleAnalysis = useCallback(async (fileSource) => {
         if (isLoadingRef.current || !currentUser) return;
         isLoadingRef.current = true;
-
         setPhase('loading');
         setError(null);
         stopCamera();
@@ -101,14 +106,9 @@ const useFaceScan = (currentUser) => {
         if (fileInputRef.current) fileInputRef.current.value = '';
 
         try {
-            // 1. AI analysis — main.py handles data storage server-side
             const aiData = await analyzeFace(fileSource);
-
             if (aiData.status === 'success') {
-                // 2. Fetch matching haircuts from DB
-                const cuts = await fetchHaircutsByShape(aiData.detected_shape);
                 setResult(aiData);
-                setRecommendations(cuts);
                 setPhase('result');
             } else {
                 setError(aiData.message || 'Analysis failed. Try a clearer photo.');
@@ -143,7 +143,6 @@ const useFaceScan = (currentUser) => {
     const reset = useCallback(() => {
         setPhase('idle');
         setResult(null);
-        setRecommendations([]);
         setCapturedImg(null);
         setError(null);
     }, []);
@@ -177,7 +176,6 @@ const FilterChips = ({ active, onChange }) => (
 const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
     const [filter, setFilter] = useState('All');
 
-    // Items matching the active length filter
     const filteredItems = useMemo(
         () =>
             filter === 'All'
@@ -186,11 +184,6 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
         [recommendations, filter]
     );
 
-    // "More Styles" — random picks from the full pool, excluding already-shown items
-    // FIX: was using Math.random() inside useMemo which only runs once and never
-    //      reshuffles. Also was pooling from the wrong set (non-matching lengths).
-    //      Now uses useState + useEffect so it re-shuffles when filter or
-    //      recommendations change.
     const [similarStyles, setSimilarStyles] = useState([]);
     useEffect(() => {
         const shownIds = new Set(filteredItems.map((h) => h._id));
@@ -226,7 +219,6 @@ const ResultView = ({ result, capturedImg, recommendations, onReset }) => {
                 </h4>
                 <div className="cards-grid">
                     {filteredItems.map((h) => (
-                        // FIX: removed h._id?.$oid fallback — Mongoose returns plain string _id
                         <Card key={h._id} id={h._id} imageUrl={h.imageUrl} name={h.name} description={h.style} />
                     ))}
                 </div>
@@ -263,7 +255,7 @@ const FaceScanPage = ({ currentUser, authLoading }) => {
                 text: 'Please login to access the AI Face Scan feature.',
                 icon: 'lock',
                 confirmButtonColor: '#ff4757',
-                confirmButtonText: 'Go to Loginn',
+                confirmButtonText: 'Go to Login',
                 allowOutsideClick: false,
             }).then(() => navigate('/login'));
         }

@@ -1,17 +1,14 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase-config';
 import { updateProfile, signOut } from 'firebase/auth';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // NEW
 import { Card } from '../components/cards';
 import './profile.css';
 import Loader from '../components/Loader';
 import Swal from 'sweetalert2';
 
 const Profile = ({ currentUser }) => {
-  const [likes, setLikes] = useState([]);
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [showLoader, setShowLoader] = useState(false); // 👈 Delayed loader sathi
-
+  const queryClient = useQueryClient();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
@@ -22,45 +19,93 @@ const Profile = ({ currentUser }) => {
   const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME;
   const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
-  // --- Delayed Loader Logic ---
-  useEffect(() => {
-    let timeout;
-    if (loading) {
-      timeout = setTimeout(() => setShowLoader(true), 800);
-    } else {
-      setShowLoader(false);
-    }
-    return () => clearTimeout(timeout);
-  }, [loading]);
-
-  const loadUserData = useCallback(async () => {
-    if (!currentUser) return;
-    setLoading(true);
-    try {
+  // --- 1. Queries ---
+  
+  // Likes Query
+  const { data: likes = [], isLoading: likesLoading } = useQuery({
+    queryKey: ['userLikes', currentUser?.uid],
+    queryFn: async () => {
       const token = await currentUser.getIdToken();
-      const [likesRes, commRes] = await Promise.all([
-        fetch(`${API_BASE}/users/me/likes`, { headers: { 'Authorization': `Bearer ${token}` } }),
-        fetch(`${API_BASE}/users/me/comments`, { headers: { 'Authorization': `Bearer ${token}` } })
-      ]);
+      const res = await fetch(`${API_BASE}/users/me/likes`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      return res.json();
+    },
+    enabled: !!currentUser, // Only run if user is logged in
+  });
 
-      const likesData = await likesRes.json();
-      const commData = await commRes.json();
+  // Comments Query
+  const { data: comments = [], isLoading: commentsLoading } = useQuery({
+    queryKey: ['userComments', currentUser?.uid],
+    queryFn: async () => {
+      const token = await currentUser.getIdToken();
+      const res = await fetch(`${API_BASE}/users/me/comments`, { 
+        headers: { 'Authorization': `Bearer ${token}` } 
+      });
+      return res.json();
+    },
+    enabled: !!currentUser,
+  });
 
-      setLikes(Array.isArray(likesData) ? likesData : []);
-      setComments(Array.isArray(commData) ? commData : []);
-    } catch (err) {
-      console.error("Load error:", err);
-    } finally {
-      setLoading(false);
+  // --- 2. Mutations ---
+
+  // Delete Comment Mutation
+  const deleteMutation = useMutation({
+    mutationFn: async (commentId) => {
+      const token = await currentUser.getIdToken();
+      const res = await fetch(`${API_BASE}/comments/${commentId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (!res.ok) throw new Error('Delete failed');
+      return commentId;
+    },
+    onSuccess: () => {
+      // Refresh the comments list automatically
+      queryClient.invalidateQueries({ queryKey: ['userComments', currentUser?.uid] });
+      Swal.fire('Deleted!', 'Your comment has been deleted.', 'success');
     }
-  }, [currentUser, API_BASE]);
+  });
+
+  // Profile Update Mutation
+  const updateProfileMutation = useMutation({
+    mutationFn: async ({ name, file }) => {
+      let photoURL = currentUser.photoURL;
+      
+      if (file) {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('upload_preset', UPLOAD_PRESET);
+        const cloudRes = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
+          method: 'POST',
+          body: formData
+        });
+        const cloudData = await cloudRes.json();
+        photoURL = cloudData.secure_url;
+      }
+
+      // Sync with Firebase
+      await updateProfile(auth.currentUser, { displayName: name, photoURL });
+
+      // Sync with Backend
+      const token = await currentUser.getIdToken();
+      await fetch(`${API_BASE}/users/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({ displayName: name, photoURL })
+      });
+    },
+    onSuccess: () => {
+      Swal.fire('Success!', 'Profile Updated Successfully', 'success')
+        .then(() => window.location.reload());
+    }
+  });
+
+  // --- Handlers ---
 
   useEffect(() => {
-    if (currentUser) {
-      setNewName(currentUser.displayName || "");
-      loadUserData();
-    }
-  }, [currentUser, loadUserData]);
+    if (currentUser) setNewName(currentUser.displayName || "");
+  }, [currentUser]);
 
   const toggleZoom = (status) => {
     setIsZoomed(status);
@@ -75,82 +120,27 @@ const Profile = ({ currentUser }) => {
     }
   };
 
-  const uploadToCloudinary = async () => {
-    const formData = new FormData();
-    formData.append('file', selectedFile);
-    formData.append('upload_preset', UPLOAD_PRESET);
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`, {
-      method: 'POST',
-      body: formData
-    });
-    const data = await res.json();
-    return data.secure_url;
-  };
-
-  const saveProfile = async () => {
-    setLoading(true);
-    try {
-      let photoURL = currentUser.photoURL;
-      if (selectedFile) {
-        photoURL = await uploadToCloudinary();
-      }
-
-      await updateProfile(auth.currentUser, { displayName: newName, photoURL });
-
-      const token = await currentUser.getIdToken();
-      await fetch(`${API_BASE}/users/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-        body: JSON.stringify({ displayName: newName, photoURL })
-      });
-
-      Swal.fire({
-        title: 'Success!',
-        text: 'Profile Updated Successfully',
-        icon: 'success',
-        confirmButtonColor: '#000000',
-      }).then(() => {
-        window.location.reload();
-      });
-    } catch (err) {
-      alert("Update failed");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const deleteComment = async (commentId) => {
+  const handleDelete = (commentId) => {
     Swal.fire({
       title: 'Are you sure?',
       text: "You won't be able to revert this!",
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ff4757',
-      cancelButtonColor: '#000',
       confirmButtonText: 'Yes, delete it!'
-    }).then(async (result) => {
-      if (result.isConfirmed) {
-        try {
-          const token = await currentUser.getIdToken();
-          const res = await fetch(`${API_BASE}/comments/${commentId}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-          });
-          if (res.ok) {
-            setComments(comments.filter(c => (c._id?.$oid || c._id) !== commentId));
-            Swal.fire('Deleted!', 'Your comment has been deleted.', 'success');
-          }
-        } catch (err) {
-          Swal.fire('Error', 'Delete failed', 'error');
-        }
-      }
+    }).then((result) => {
+      if (result.isConfirmed) deleteMutation.mutate(commentId);
     });
   };
 
-  // --- Rendering Logic ---
+  const handleSave = () => {
+    updateProfileMutation.mutate({ name: newName, file: selectedFile });
+  };
+
+  // --- Rendering ---
+
   if (!currentUser) return <div className="loader-msg">Please login to view profile.</div>;
-  if (showLoader) return <Loader />;
-  if (loading && !showLoader) return null;
+  if (likesLoading || commentsLoading) return <Loader />;
 
   return (
     <div className="profile-container">
@@ -176,8 +166,9 @@ const Profile = ({ currentUser }) => {
         </div>
       </div>
 
+      {/* Favorites Section */}
       <div className="user-section">
-        <h3> {currentUser.displayName}'s favourite Hairstyles</h3>
+        <h3>{currentUser.displayName}'s Favourite Hairstyles</h3>
         {likes.length > 0 ? (
           <div className="cards-grid">
             {likes.map(item => {
@@ -195,6 +186,7 @@ const Profile = ({ currentUser }) => {
         ) : <p className="empty-msg">No liked styles yet.</p>}
       </div>
 
+      {/* Comments Section */}
       <div className="user-section">
         <h3>Your Comments</h3>
         <div className="comments-list">
@@ -202,12 +194,19 @@ const Profile = ({ currentUser }) => {
             <div key={c._id?.$oid || c._id} className="profile-comment-item">
               <p><strong>On: {c.haircutName}</strong></p>
               <p>{c.text}</p>
-              <button onClick={() => deleteComment(c._id?.$oid || c._id)} className="delete-btn">Delete</button>
+              <button 
+                onClick={() => handleDelete(c._id?.$oid || c._id)} 
+                className="delete-btn"
+                disabled={deleteMutation.isPending}
+              >
+                {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              </button>
             </div>
           )) : <p className="empty-msg">No comments made yet.</p>}
         </div>
       </div>
 
+      {/* Modal */}
       {isModalOpen && (
         <div className="modal-overlay">
           <div className="modal-content">
@@ -228,8 +227,12 @@ const Profile = ({ currentUser }) => {
             {previewUrl && <img src={previewUrl} alt="Preview" className="preview-img" />}
             <div className="modal-actions">
               <button onClick={() => setIsModalOpen(false)}>Cancel</button>
-              <button onClick={saveProfile} className="save-btn" disabled={loading}>
-                {loading ? "Saving..." : "Save Changes"}
+              <button 
+                onClick={handleSave} 
+                className="save-btn" 
+                disabled={updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? "Saving..." : "Save Changes"}
               </button>
             </div>
           </div>

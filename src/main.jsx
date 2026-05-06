@@ -6,25 +6,41 @@ import './index.css';
 import { HelmetProvider } from 'react-helmet-async';
 import App from './App.jsx';
 
+// --- Import TanStack Query ---
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
 // 1. Google Analytics Initialization
-// .env madhe VITE_GOOGLE_ANALYTICS_ID asle pahije
 const GA_ID = import.meta.env.VITE_GOOGLE_ANALYTICS_ID;
 
 if (GA_ID) {
   ReactGA.initialize(GA_ID);
-  // Initial page load track karnyasaathi
   ReactGA.send({ hitType: "pageview", page: window.location.pathname });
 } else {
   console.warn("Google Analytics ID missing in .env file");
 }
 
-// 2. Rendering the App
+// 2. Initialize the TanStack Query Client
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // This ensures that when a user switches tabs and comes back, 
+      // the app doesn't trigger a loading spinner if data is less than 5 mins old.
+      staleTime: 1000 * 60 * 5, 
+      retry: 2, // If the backend fails, try again twice automatically
+    },
+  },
+});
+
+// 3. Rendering the App
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <HelmetProvider> {/* Ha provider asne compulsory ahe */}
-      <BrowserRouter>
-        <App />
-      </BrowserRouter>
-    </HelmetProvider>
+    {/* Wrap everything with QueryClientProvider */}
+    <QueryClientProvider client={queryClient}>
+      <HelmetProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </HelmetProvider>
+    </QueryClientProvider>
   </StrictMode>
 );
