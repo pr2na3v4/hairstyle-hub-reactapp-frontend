@@ -1,21 +1,27 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { Routes, Route, useLocation } from 'react-router-dom';
 import ReactGA from "react-ga4";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from './firebase-config'; 
-import Home from './pages/home';
-import Categories from './pages/categories';
-import About from './pages/about';
-import HairDetail from './pages/hairdetail';  
-import Navbar from './components/navbar';
-import Login from './components/Login';
-import Profile from './pages/Profile';
-import FaceScanPage from './pages/FaceScanPage';
 import { useRegisterSW } from 'virtual:pwa-register/react';
+
+// --- Static Imports (Keep these in the main bundle) ---
+import Navbar from './components/navbar';
+import Loader from './components/Loader'; // Use your existing Loader for Suspense
+
+// --- Lazy Imports (Split these into separate chunks) ---
+const Home          = lazy(() => import('./pages/home'));
+const Categories    = lazy(() => import('./pages/categories'));
+const About         = lazy(() => import('./pages/about'));
+const HairDetail    = lazy(() => import('./pages/hairdetail'));  
+const Login         = lazy(() => import('./components/Login'));
+const Profile       = lazy(() => import('./pages/Profile'));
+const FaceScanPage  = lazy(() => import('./pages/FaceScanPage'));
 
 function App() {
   const location = useLocation();
   const [currentUser, setCurrentUser] = useState(null);
+  const [authLoading, setAuthLoading] = useState(true); // Track auth state
   
   // PWA Service Worker Register
   useRegisterSW({ immediate: true });
@@ -32,6 +38,7 @@ function App() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
+      setAuthLoading(false); // Auth check is done
     });
     return () => unsubscribe(); 
   }, []);
@@ -45,15 +52,21 @@ function App() {
   return (
     <>
       <Navbar links={navData} currentUser={currentUser} />
-      <Routes>
-        <Route path="/" element={<Home currentUser={currentUser} />} />
-        <Route path="/categories" element={<Categories currentUser={currentUser} />} />
-        <Route path="/about" element={<About currentUser={currentUser} />} />
-        <Route path="/login" element={<Login currentUser={currentUser} />} />
-        <Route path="/profile" element={<Profile currentUser={currentUser} />} />
-        <Route path="/haircut/:id" element={<HairDetail currentUser={currentUser} />} />
-        <Route path="/face-scan" element={<FaceScanPage currentUser={currentUser} />} />        
-      </Routes>
+      
+      {/* Suspense handles the 'wait' while the browser downloads the small 
+          page chunks. It shows your Loader component in the meantime.
+      */}
+      <Suspense fallback={<Loader />}>
+        <Routes>
+          <Route path="/" element={<Home currentUser={currentUser} />} />
+          <Route path="/categories" element={<Categories currentUser={currentUser} />} />
+          <Route path="/about" element={<About currentUser={currentUser} />} />
+          <Route path="/login" element={<Login currentUser={currentUser} />} />
+          <Route path="/profile" element={<Profile currentUser={currentUser} authLoading={authLoading} />} />
+          <Route path="/haircut/:id" element={<HairDetail currentUser={currentUser} />} />
+          <Route path="/face-scan" element={<FaceScanPage currentUser={currentUser} authLoading={authLoading} />} />        
+        </Routes>
+      </Suspense>
     </>
   );
 }

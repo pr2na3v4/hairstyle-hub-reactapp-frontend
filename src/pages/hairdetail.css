@@ -72,14 +72,15 @@
   cursor: pointer;
 }
 
-.action-fab.active { 
-  color: var(--primary-pink); 
+.action-fab.like.active i {
+  color: #ff4757; /* Or your preferred red */
+  
 }
 
-.action-fab:active { 
-  transform: scale(0.9); 
+.action-fab.action-fab.like.active i {
+  transform: scale(2.5); /* Enlarge the heart icon */
+  transition: all 0.3s ease;
 }
-
 /* --- Content Section --- */
 .detail-content {
   padding: 40px 20px 20px;

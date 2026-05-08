@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { auth } from '../firebase-config';
 import { updateProfile, signOut } from 'firebase/auth';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'; // NEW
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from '../components/cards';
 import './profile.css';
 import Loader from '../components/Loader';
@@ -20,8 +20,6 @@ const Profile = ({ currentUser }) => {
   const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET;
 
   // --- 1. Queries ---
-  
-  // Likes Query
   const { data: likes = [], isLoading: likesLoading } = useQuery({
     queryKey: ['userLikes', currentUser?.uid],
     queryFn: async () => {
@@ -31,10 +29,9 @@ const Profile = ({ currentUser }) => {
       });
       return res.json();
     },
-    enabled: !!currentUser, // Only run if user is logged in
+    enabled: !!currentUser,
   });
 
-  // Comments Query
   const { data: comments = [], isLoading: commentsLoading } = useQuery({
     queryKey: ['userComments', currentUser?.uid],
     queryFn: async () => {
@@ -49,7 +46,6 @@ const Profile = ({ currentUser }) => {
 
   // --- 2. Mutations ---
 
-  // Delete Comment Mutation
   const deleteMutation = useMutation({
     mutationFn: async (commentId) => {
       const token = await currentUser.getIdToken();
@@ -61,13 +57,11 @@ const Profile = ({ currentUser }) => {
       return commentId;
     },
     onSuccess: () => {
-      // Refresh the comments list automatically
       queryClient.invalidateQueries({ queryKey: ['userComments', currentUser?.uid] });
-      Swal.fire('Deleted!', 'Your comment has been deleted.', 'success');
+      Swal.fire({ title: 'Deleted!', icon: 'success', timer: 1500, showConfirmButton: false });
     }
   });
 
-  // Profile Update Mutation
   const updateProfileMutation = useMutation({
     mutationFn: async ({ name, file }) => {
       let photoURL = currentUser.photoURL;
@@ -84,20 +78,22 @@ const Profile = ({ currentUser }) => {
         photoURL = cloudData.secure_url;
       }
 
-      // Sync with Firebase
       await updateProfile(auth.currentUser, { displayName: name, photoURL });
 
-      // Sync with Backend
       const token = await currentUser.getIdToken();
       await fetch(`${API_BASE}/users/sync`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
         body: JSON.stringify({ displayName: name, photoURL })
       });
+      
+      return { name, photoURL };
     },
     onSuccess: () => {
-      Swal.fire('Success!', 'Profile Updated Successfully', 'success')
-        .then(() => window.location.reload());
+      setIsModalOpen(false);
+      Swal.fire('Success!', 'Profile Updated', 'success');
+      // Instead of reload(), the App state usually updates via Firebase listener
+      // If using a custom UserContext, you would trigger an update here.
     }
   });
 
@@ -107,59 +103,49 @@ const Profile = ({ currentUser }) => {
     if (currentUser) setNewName(currentUser.displayName || "");
   }, [currentUser]);
 
-  const toggleZoom = (status) => {
-    setIsZoomed(status);
-    document.body.style.overflow = status ? 'hidden' : 'auto';
-  };
+  // Memory Cleanup: Revoke preview URL when component unmounts or file changes
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
       setSelectedFile(file);
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  const handleDelete = (commentId) => {
-    Swal.fire({
-      title: 'Are you sure?',
-      text: "You won't be able to revert this!",
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ff4757',
-      confirmButtonText: 'Yes, delete it!'
-    }).then((result) => {
-      if (result.isConfirmed) deleteMutation.mutate(commentId);
-    });
-  };
-
   const handleSave = () => {
+    if (!newName.trim()) return Swal.fire('Error', 'Name cannot be empty', 'error');
     updateProfileMutation.mutate({ name: newName, file: selectedFile });
   };
-
-  // --- Rendering ---
 
   if (!currentUser) return <div className="loader-msg">Please login to view profile.</div>;
   if (likesLoading || commentsLoading) return <Loader />;
 
   return (
-    <div className="profile-container">
+    <div className="profile-container animate-fade-in">
+      {/* Lightbox */}
       {isZoomed && (
-        <div className="image-lightbox active" onClick={() => toggleZoom(false)}>
-          <button className="close-lightbox"><i className="ri-close-line"></i></button>
-          <img src={currentUser.photoURL} alt="Zoomed" className="enlarged-img" />
+        <div className="image-lightbox active" onClick={() => setIsZoomed(false)}>
+          <img src={currentUser.photoURL || "https://www.w3schools.com/howto/img_avatar.png"} alt="Zoomed" className="enlarged-img" />
         </div>
       )}
 
       <div className="profile-card">
-        <img 
-          src={currentUser.photoURL || "https://www.w3schools.com/howto/img_avatar.png"} 
-          alt="Avatar" 
-          className="profile-avatar"
-          onClick={() => toggleZoom(true)}
-        />
+        <div className="avatar-wrapper">
+          <img 
+            src={currentUser.photoURL || "https://www.w3schools.com/howto/img_avatar.png"} 
+            alt="Avatar" 
+            className="profile-avatar"
+            onClick={() => setIsZoomed(true)}
+            loading="lazy"
+          />
+        </div>
         <h2>{currentUser.displayName}</h2>
-        <p>{currentUser.email}</p>
+        <p className="email-text">{currentUser.email}</p>
         <div className="profile-btns">
           <button onClick={() => setIsModalOpen(true)} className="edit-btn">Edit Profile</button>
           <button onClick={() => signOut(auth)} className="logout-btn">Logout</button>
@@ -168,7 +154,7 @@ const Profile = ({ currentUser }) => {
 
       {/* Favorites Section */}
       <div className="user-section">
-        <h3>{currentUser.displayName}'s Favourite Hairstyles</h3>
+        <h3>Your Saved Styles</h3>
         {likes.length > 0 ? (
           <div className="cards-grid">
             {likes.map(item => {
@@ -186,30 +172,10 @@ const Profile = ({ currentUser }) => {
         ) : <p className="empty-msg">No liked styles yet.</p>}
       </div>
 
-      {/* Comments Section */}
-      <div className="user-section">
-        <h3>Your Comments</h3>
-        <div className="comments-list">
-          {comments.length > 0 ? comments.map(c => (
-            <div key={c._id?.$oid || c._id} className="profile-comment-item">
-              <p><strong>On: {c.haircutName}</strong></p>
-              <p>{c.text}</p>
-              <button 
-                onClick={() => handleDelete(c._id?.$oid || c._id)} 
-                className="delete-btn"
-                disabled={deleteMutation.isPending}
-              >
-                {deleteMutation.isPending ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          )) : <p className="empty-msg">No comments made yet.</p>}
-        </div>
-      </div>
-
       {/* Modal */}
       {isModalOpen && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div className="modal-overlay" onClick={() => setIsModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h3>Edit Profile</h3>
             <input 
               type="text" 
@@ -220,8 +186,7 @@ const Profile = ({ currentUser }) => {
             <div className="file-upload-wrapper">
               <input type="file" id="profile-upload" onChange={handleFileChange} accept="image/*" hidden />
               <label htmlFor="profile-upload" className="custom-file-upload">
-                <i className="ri-image-edit-line"></i> 
-                {selectedFile ? "Change Photo" : "Upload New Photo"}
+                {selectedFile ? "File Selected" : "Upload New Photo"}
               </label>
             </div>
             {previewUrl && <img src={previewUrl} alt="Preview" className="preview-img" />}

@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useLocation } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query'; // Import Hook
+import { useQuery } from '@tanstack/react-query'; 
 import { Card } from '../components/cards';
 import Loader from '../components/Loader';
 import './categories.css';
 
-// Fetch function (Same as Home.js to reuse the cache)
+// Move fetcher out to keep component body clean
 const fetchHaircuts = async () => {
   const response = await fetch('https://hairstyle-hub-backend.onrender.com/api/haircuts');
   if (!response.ok) throw new Error('Network response was not ok');
@@ -17,77 +17,85 @@ const Categories = () => {
   
   // --- States ---
   const [searchTerm, setSearchTerm] = useState('');
+  // 1. Optimization: Debounced search term to prevent excessive filtering while typing
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [filters, setFilters] = useState({ length: '', face: '', tag: '' });
 
-  // --- TanStack Query Implementation ---
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm), 300);
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
   const { data: haircuts = [], isLoading } = useQuery({
-    queryKey: ['haircuts'], // Uses same key as Home to get data from cache
+    queryKey: ['haircuts'], 
     queryFn: fetchHaircuts,
-    staleTime: 1000 * 60 * 60, // 1 Hour
+    staleTime: 1000 * 60 * 60, 
   });
 
-  // Handle incoming filter state from Home page (e.g., clicking 'Oval')
   useEffect(() => {
-    if (location.state && location.state.selectedShape) {
+    if (location.state?.selectedShape) {
       setFilters(prev => ({ ...prev, face: location.state.selectedShape }));
     }
   }, [location.state]);
 
-  // --- Optimized Filter Logic ---
-  // useMemo ensures we only re-calculate when haircuts, search, or filters change
   const filteredData = useMemo(() => {
     return haircuts.filter(item => {
-      const searchLower = searchTerm.toLowerCase();
+      const searchLower = debouncedSearch.toLowerCase();
       
-      const matchName = item.name?.toLowerCase().includes(searchLower);
-      const matchTagsInSearch = item.tags && item.tags.some(tag => 
-        tag.toLowerCase().includes(searchLower)
-      );
+      const matchSearch = !searchLower || 
+        item.name?.toLowerCase().includes(searchLower) || 
+        item.tags?.some(tag => tag.toLowerCase().includes(searchLower));
 
-      const matchSearch = matchName || matchTagsInSearch;
-      const matchLength = filters.length ? item.hairLength === filters.length : true;
-      const matchFace = filters.face ? (item.faceShape && item.faceShape.includes(filters.face)) : true;
-      const matchTag = filters.tag ? (item.tags && item.tags.includes(filters.tag)) : true;
+      const matchLength = !filters.length || item.hairLength === filters.length;
+      const matchFace = !filters.face || (item.faceShape && item.faceShape.includes(filters.face));
+      const matchTag = !filters.tag || (item.tags && item.tags.includes(filters.tag));
       
       return matchSearch && matchLength && matchFace && matchTag;
     });
-  }, [searchTerm, filters, haircuts]);
+  }, [debouncedSearch, filters, haircuts]);
 
   const updateFilter = (type, value) => {
     setFilters(prev => ({ ...prev, [type]: prev[type] === value ? '' : value }));
   };
 
-  // If loading and no cache exists, show Loader
   if (isLoading && haircuts.length === 0) return <Loader />;
 
   return (
     <div className="categories-page">
-      {/* Search Input */}
       <div className="search-section">
         <div className="search-bar">
           <i className="ri-search-line"></i>
           <input 
             type="text" 
-            placeholder="Search haircut name..." 
+            placeholder="Search hairstyles..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Filter Chips */}
+      {/* 2. UI Improvement: Dynamic Filter list */}
       <div className="filter-scroll">
-        <button className={filters.tag === 'professional' ? 'active' : ''} onClick={() => updateFilter('tag', 'professional')}>Professional</button>
-        <button className={filters.length === 'Short' ? 'active' : ''} onClick={() => updateFilter('length', 'Short')}>Short</button>
-        <button className={filters.length === 'Medium' ? 'active' : ''} onClick={() => updateFilter('length', 'Medium')}>Medium</button>
-        <button className={filters.length === 'Long' ? 'active' : ''} onClick={() => updateFilter('length', 'Long')}>Long</button>
-        <button className={filters.face === 'Oval' ? 'active' : ''} onClick={() => updateFilter('face', 'Oval')}>Oval Face</button>
-        <button className={filters.face === 'Square' ? 'active' : ''} onClick={() => updateFilter('face', 'Square')}>Square Face</button>
-        <button className={filters.face === 'Round' ? 'active' : ''} onClick={() => updateFilter('face', 'Round')}>Round Face</button>
-        <button className={filters.face === 'Diamond' ? 'active' : ''} onClick={() => updateFilter('face', 'Diamond')}>Diamond Face</button>
+        {[
+          { key: 'tag', value: 'professional', label: 'Professional' },
+          { key: 'length', value: 'Short', label: 'Short' },
+          { key: 'length', value: 'Medium', label: 'Medium' },
+          { key: 'length', value: 'Long', label: 'Long' },
+          { key: 'face', value: 'Oval', label: 'Oval Face' },
+          { key: 'face', value: 'Square', label: 'Square Face' },
+          { key: 'face', value: 'Round', label: 'Round Face' },
+          { key: 'face', value: 'Diamond', label: 'Diamond Face' },
+        ].map((btn) => (
+          <button 
+            key={btn.label}
+            className={filters[btn.key] === btn.value ? 'active' : ''} 
+            onClick={() => updateFilter(btn.key, btn.value)}
+          >
+            {btn.label}
+          </button>
+        ))}
       </div>
 
-      {/* Results Section */}
       <div className="results-container">
         {filteredData.length > 0 ? (
           <div className="cards-grid">
@@ -98,11 +106,12 @@ const Categories = () => {
                 name={item.name}
                 imageUrl={item.imageUrl}
                 description={item.style}
+                // 3. Tip: Ensure your Card component uses loading="lazy" inside!
               />
             ))}
           </div>
         ) : (
-          <div className="no-results">
+          <div className="no-results animate-fade-in">
             <i className="ri-find-replace-line"></i>
             <p>No hairstyles match your search.</p>
           </div>
