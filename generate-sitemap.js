@@ -6,7 +6,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 // DATABASE CONNECTION
-const MONGO_URI = process.env.VITE_moogodb_URL;
+const MONGO_URI = process.env.MONGODB_URL;
 if (!MONGO_URI) {
   console.error("MongoDB URI missing in .env file");
   process.exit(1);

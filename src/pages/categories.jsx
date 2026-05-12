@@ -5,9 +5,11 @@ import { Card } from '../components/cards';
 import Loader from '../components/Loader';
 import './categories.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // Move fetcher out to keep component body clean
 const fetchHaircuts = async () => {
-  const response = await fetch('https://hairstyle-hub-backend.onrender.com/api/haircuts');
+  const response = await fetch(`${API_BASE_URL}/haircuts`);
   if (!response.ok) throw new Error('Network response was not ok');
   return response.json();
 };

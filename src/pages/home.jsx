@@ -6,6 +6,8 @@ import Loader from '../components/Loader';
 import Footer from '../components/footer';
 import './home.css';
 
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
 // 1. Move Skeleton to a separate file later, but for now, let's keep it clean
 const SkeletonCard = () => (
   <div className="skeleton-card shimmer">
@@ -18,7 +20,7 @@ const SkeletonCard = () => (
 );
 
 const fetchHaircuts = async () => {
-  const response = await fetch('https://hairstyle-hub-backend.onrender.com/api/haircuts');
+  const response = await fetch(`${API_BASE_URL}/haircuts`);
   if (!response.ok) throw new Error('Network response was not ok');
   return response.json();
 };

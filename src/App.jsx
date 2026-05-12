@@ -4,7 +4,6 @@ import ReactGA from "react-ga4";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from './firebase-config'; 
 import { useRegisterSW } from 'virtual:pwa-register/react';
-
 // --- Static Imports (Keep these in the main bundle) ---
 import Navbar from './components/navbar';
 import Loader from './components/Loader'; // Use your existing Loader for Suspense
@@ -17,6 +16,8 @@ const HairDetail    = lazy(() => import('./pages/hairdetail'));
 const Login         = lazy(() => import('./components/Login'));
 const Profile       = lazy(() => import('./pages/Profile'));
 const FaceScanPage  = lazy(() => import('./pages/FaceScanPage'));
+
+const FACE_SCAN_API_URL = import.meta.env.VITE_FACE_SCAN_API_URL;
 
 function App() {
   const location = useLocation();
@@ -41,6 +42,22 @@ function App() {
       setAuthLoading(false); // Auth check is done
     });
     return () => unsubscribe(); 
+  }, []);
+
+  useEffect(() => {
+    // This "warms up" the AI backend while the user is still looking at the home page
+    const warmUpAI = async () => {
+      if (!FACE_SCAN_API_URL) return;
+
+      try {
+        await fetch(`${FACE_SCAN_API_URL}/ping`);
+        console.log("🔥 AI Backend Warmed Up");
+      } catch (err) {
+        console.error("AI Warmup failed", err);
+      }
+    };
+
+    warmUpAI();
   }, []);
 
   const navData = [

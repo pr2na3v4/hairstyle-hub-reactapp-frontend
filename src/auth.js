@@ -9,11 +9,15 @@ import {
 
 // 1. Firebase Configuration (FIXED KEYS)
 const firebaseConfig = {
-    apiKey: "AIzaSyA9ptGsJbPvZFLAPMoWum1wnIv3q9hI8XE",
-    authDomain: "hairstylehub-aaff8.firebaseapp.com",
-    projectId: "hairstylehub-aaff8", // Fixed key name
-    storageBucket: "hairstylehub-aaff8.appspot.com", // Added standard bucket format
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
+
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 // 2. Initialize
 const app = initializeApp(firebaseConfig);
@@ -37,7 +41,7 @@ export const googleLogin = async () => {
 
         // 1. Start the Sync (but don't let it block the redirect if it's slow)
         try {
-            await fetch("https://hairstyle-hub-backend.onrender.com/api/users/sync", {
+            await fetch(`${API_BASE_URL}/users/sync`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

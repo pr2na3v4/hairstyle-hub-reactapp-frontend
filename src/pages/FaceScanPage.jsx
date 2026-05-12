@@ -12,8 +12,8 @@ import { Card } from '../components/cards';
 import './FaceScanPage.css';
 import Loader from '../components/Loader';
 
-const AI_API      = 'https://hairstyle-hub-backend-ai.onrender.com';
-const DB_API      = 'https://hairstyle-hub-backend.onrender.com';
+const AI_API = import.meta.env.VITE_FACE_SCAN_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 const LENGTH_FILTERS  = ['All', 'Short', 'Medium', 'Long'];
 const SIMILAR_COUNT   = 4;
 
@@ -29,7 +29,7 @@ const analyzeFace = async (fileSource) => {
 };
 
 const fetchAllHaircuts = async () => {
-    const res = await fetch(`${DB_API}/api/haircuts`);
+    const res = await fetch(`${API_BASE_URL}/haircuts`);
     return res.json();
 };
 

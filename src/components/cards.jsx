@@ -5,9 +5,7 @@ import './card.css';
 import Loader from './Loader';
 
 // ─── Configuration ────────────────────────────────────────────────────────────
-const BASE_URL =
-    import.meta.env.VITE_API_BASE_URL ||
-    'https://hairstyle-hub-backend.onrender.com/api';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const DESC_MAX_LENGTH = 50;
 
