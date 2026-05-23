@@ -8,7 +8,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg', 'offline.html'],
+      includeAssets: [],
       manifest: {
         name: 'HairstyleHub',
         short_name: 'HairstyleHub',
@@ -53,6 +53,7 @@ export default defineConfig({
       workbox: {
         // Reduced size of initial precache by focusing on core assets
         globPatterns: ['**/*.{js,css,html,png,svg,ico}'],
+        globIgnores: ['**/offline copy.html', '**/mobile-screenshot.png', '**/desktop-screenshot.png'],
         // Increase the size limit for the precache manifest (default is 2MB)
         maximumFileSizeToCacheInBytes: 3000000, 
         runtimeCaching: [
