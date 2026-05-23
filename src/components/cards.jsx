@@ -17,7 +17,11 @@ const truncate = (text, max) =>
 
 // ─── Individual Card (Stateless) ──────────────────────────────────────────────
 export const Card = ({ id, name, imageUrl, description }) => (
-    <div className="card-container animate-up">
+    <Link
+        to={`/haircut/${id}`}
+        className="card-container animate-up"
+        aria-label={`View details for ${name}`}
+    >
         <div className="card-image-box">
             <img src={imageUrl} alt={name} loading="lazy" />
         </div>
@@ -27,16 +31,12 @@ export const Card = ({ id, name, imageUrl, description }) => (
             {truncate(description, DESC_MAX_LENGTH) && (
                 <p className="card-desc">{truncate(description, DESC_MAX_LENGTH)}</p>
             )}
-            <Link
-                to={`/haircut/${id}`}
-                className="view-details-btn"
-                aria-label={`View details for ${name}`}
-            >
+            <span className="view-details-btn">
                 View Details
                 <i className="ri-arrow-right-line" aria-hidden="true" />
-            </Link>
+            </span>
         </div>
-    </div>
+    </Link>
 );
 
 // ─── Cards Grid (Data Logic with TanStack Query) ──────────────────────────────
