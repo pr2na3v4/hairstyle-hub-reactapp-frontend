@@ -13,15 +13,15 @@
 .hair-detail-wrapper {
   background: var(--white);
   min-height: 100vh;
-  padding-bottom: 80px; /* Space for bottom navigation */
+  padding-bottom: 80px;
 }
 
-/* --- Hero Section (Image Header) --- */
+/* --- Hero Section --- */
 .detail-header {
   position: relative;
   width: 100%;
   height: 70vh;
-  /* overflow: visible; Important: allows the floating button to overlap */
+  cursor: zoom-in;
 }
 
 .hero-img {
@@ -45,16 +45,16 @@
   justify-content: center;
   font-size: 24px;
   z-index: 10;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   cursor: pointer;
 }
 
-/* --- Floating Like Button Fix --- */
+/* --- Floating Like Button --- */
 .floating-actions {
   position: absolute;
-  bottom: -25px; 
+  bottom: -25px;
   right: 25px;
-  z-index: 20; /* Keeps button above both image and content */
+  z-index: 20;
 }
 
 .action-fab {
@@ -63,7 +63,7 @@
   border-radius: 50%;
   border: none;
   background: var(--white);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
   font-size: 22px;
   display: flex;
   align-items: center;
@@ -73,14 +73,13 @@
 }
 
 .action-fab.like.active i {
-  color: #ff4757; /* Or your preferred red */
-  
+  color: #e10f21 !important;
 }
 
-.action-fab.action-fab.like.active i {
-  transform: scale(2.5); /* Enlarge the heart icon */
-  transition: all 0.3s ease;
+.ri-heart-fill {
+  color: #eb3c4b;
 }
+
 /* --- Content Section --- */
 .detail-content {
   padding: 40px 20px 20px;
@@ -104,7 +103,6 @@
 }
 
 .like-badge {
-  margin-bottom: 10px;
   font-size: 14px;
   font-weight: 600;
   color: var(--text-muted);
@@ -122,6 +120,14 @@
   background: var(--bg-soft);
   padding: 12px;
   border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.spec-item i {
+  font-size: 20px;
+  color: var(--text-muted);
 }
 
 .spec-label {
@@ -135,9 +141,10 @@
 .spec-value {
   font-weight: 700;
   color: var(--text-main);
+  font-size: 14px;
 }
 
-/* --- Tags & Dividers --- */
+/* --- Tags --- */
 .tags-container {
   display: flex;
   flex-wrap: wrap;
@@ -146,25 +153,89 @@
 }
 
 .detail-tag {
-  color: var(--text-main);
-  font-size: 14px;
+  color: var(--text-muted);
+  font-size: 13px;
   font-weight: 600;
+  background: var(--bg-soft);
+  padding: 4px 10px;
+  border-radius: 20px;
 }
 
 .divider {
   border: 0;
   border-top: 1px solid #eee;
-  margin: 25px 0;
+  margin: 28px 0;
 }
 
-/* --- Comments Section --- */
+/* --- Section title shared style --- */
+.section-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin: 0 0 6px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  margin: 0 0 18px 0;
+  line-height: 1.5;
+}
+
+/* ─── Maintenance Tips ───────────────────────────────────────────────────────── */
+.tips-section {
+  margin-bottom: 4px;
+}
+
+.tips-list {
+  list-style: none;
+  padding: 0;
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  background: var(--bg-soft);
+  padding: 14px 16px;
+  border-radius: 14px;
+  border-left: 3px solid var(--bg-dark);
+}
+
+.tip-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.tip-text {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-main);
+  line-height: 1.55;
+}
+
+/* ─── Comments ───────────────────────────────────────────────────────────────── */
+.comments-section {
+  margin-bottom: 4px;
+}
+
 .comment-input-wrapper {
   display: flex;
   background: var(--bg-soft);
   padding: 5px 5px 5px 15px;
   border-radius: 25px;
   align-items: center;
-  margin-bottom: 25px;
+  margin: 16px 0 20px;
+  border: 1px solid #eee;
 }
 
 .comment-input-wrapper input {
@@ -187,12 +258,20 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.2s;
+}
+
+.comment-input-wrapper button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .comment-card {
   display: flex;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
+  align-items: flex-start;
 }
 
 .comment-card img {
@@ -200,21 +279,170 @@
   height: 40px;
   border-radius: 50%;
   object-fit: cover;
+  flex-shrink: 0;
+  background: #eee;
 }
 
 .comment-user {
   font-weight: 700;
   font-size: 14px;
-  margin: 0;
+  margin: 0 0 3px;
 }
 
 .comment-text {
   font-size: 14px;
   color: #444;
-  margin: 2px 0 0;
+  margin: 0;
+  line-height: 1.45;
 }
 
-/* --- Lightbox / Image Zoom --- */
+.empty-comments {
+  font-size: 14px;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 20px 0;
+}
+
+/* ─── Video Section ──────────────────────────────────────────────────────────── */
+.video-section {
+  margin-bottom: 4px;
+}
+
+.video-links {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.video-link-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--bg-soft);
+  border-radius: 14px;
+  text-decoration: none;
+  color: var(--text-main);
+  font-weight: 600;
+  font-size: 14px;
+  border: 1px solid #eee;
+  transition: var(--transition);
+}
+
+.video-link-btn:hover {
+  background: var(--bg-dark);
+  color: var(--white);
+  border-color: var(--bg-dark);
+  transform: translateX(4px);
+}
+
+.video-link-btn:hover .video-link-icon {
+  filter: none;
+}
+
+.video-link-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.video-link-btn .ri-external-link-line {
+  margin-left: auto;
+  font-size: 16px;
+  opacity: 0.5;
+}
+
+/* ─── Recommended Products ───────────────────────────────────────────────────── */
+.products-section {
+  margin-bottom: 4px;
+}
+
+.products-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.product-card {
+  display: flex;
+  gap: 14px;
+  background: var(--bg-soft);
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #eee;
+  transition: var(--transition);
+}
+
+.product-card:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.product-img-box {
+  width: 90px;
+  height: 90px;
+  flex-shrink: 0;
+  background: #e9e9e9;
+}
+
+.product-img-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.product-info {
+  padding: 12px 14px 12px 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  min-width: 0;
+}
+
+.product-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.product-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 0 0 10px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.product-buy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ff9900;
+  /* Amazon orange */
+  color: #111;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  width: fit-content;
+  transition: filter 0.2s ease;
+}
+
+.product-buy-btn:hover {
+  filter: brightness(1.08);
+}
+
+/* ─── Lightbox --- */
 .image-lightbox {
   position: fixed;
   top: 0;
@@ -235,76 +463,59 @@
   max-height: 100%;
   object-fit: contain;
   border-radius: 8px;
-  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
   animation: scaleUp 0.3s ease;
 }
 
-.close-lightbox {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  background: var(--white);
-  border: none;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  font-size: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
+/* ─── Related Styles ── */
+.related-styles {
+  margin-top: 40px;
+  padding: 20px;
 }
 
-.zoom-hint {
-  position: absolute;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.5);
-  color: var(--white);
-  padding: 5px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  pointer-events: none;
+.related-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-main);
+  margin-bottom: 16px;
 }
 
-/* --- UI Popups (Hint Bubbles) --- */
-.like-hint-bubble {
-  position: fixed;
-  bottom: 100px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: var(--bg-dark);
-  color: var(--white);
-  padding: 12px 24px;
-  border-radius: 50px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
-  z-index: 2000;
-  animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  font-weight: 600;
-  pointer-events: none;
-}
-
-/* --- Animations --- */
+/* ─── Animations ── */
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes scaleUp {
-  from { transform: scale(0.8); }
-  to { transform: scale(1); }
+  from {
+    transform: scale(0.8);
+  }
+
+  to {
+    transform: scale(1);
+  }
 }
 
-@keyframes popIn {
-  0% { opacity: 0; transform: translateX(-50%) scale(0.5); }
-  100% { opacity: 1; transform: translateX(-50%) scale(1); }
+.spin {
+  animation: spinAni 0.8s linear infinite;
 }
 
-/* --- Desktop Responsiveness --- */
+@keyframes spinAni {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease both;
+}
+
+/* ─── Desktop ── */
 @media (min-width: 768px) {
   .hair-detail-wrapper {
     display: flex;
@@ -312,43 +523,249 @@
     margin: 40px auto;
     border-radius: 24px;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0,0,0,0.1);
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
     background: var(--white);
     padding-bottom: 0;
+    align-items: flex-start;
   }
 
-  .detail-header { 
-    width: 50%; 
-    height: 700px; 
+  .detail-header {
+    width: 45%;
+    height: 100%;
+    min-height: 700px;
+    position: sticky;
+    top: 0;
   }
-  
-  .detail-content { 
-    width: 50%; 
-    padding: 50px; 
+
+  .detail-content {
+    width: 55%;
+    padding: 50px 44px;
     overflow-y: auto;
+    max-height: 100vh;
   }
-  
-  .floating-actions { 
-    bottom: 30px; 
-    right: 30px; 
+
+  .floating-actions {
+    bottom: 30px;
+    right: 30px;
   }
-  
+
   .back-btn {
     top: 30px;
     left: 30px;
   }
-}
-/* Jar class active asel tar icon red ani fill pahije */
-.action-fab.like.active i {
-  color: #e10f21 !important;
-  font-family: "remixicon" !important;
+
+  /* Products side-by-side on desktop */
+  .products-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  /* Video links in a row on desktop */
+  .video-links {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .video-link-btn {
+    flex: 1;
+    min-width: 140px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .video-link-btn .ri-external-link-line {
+    margin-left: 0;
+    margin-top: auto;
+  }
 }
 
-/* Jar Remix Icon vaprat asil tar class 'ri-heart-fill' active var diste ka paha */
-.ri-heart-fill {
-  color: #eb3c4b;
+/* ─── Video Feed ─────────────────────────────────────────────────────────────── */
+.video-section {
+  margin-bottom: 4px;
 }
-.related-styles {
-  margin-top: 40px;
+
+.video-feed {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.video-card {
+  cursor: pointer;
+  border-radius: 14px;
+  overflow: hidden;
+  background: var(--bg-soft);
+  border: 1px solid #eee;
+  transition: var(--transition);
+}
+
+.video-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.10);
+}
+
+.video-card:active {
+  transform: scale(0.97);
+}
+
+.video-thumb-box {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #1a1a1a;
+  overflow: hidden;
+}
+
+.video-thumb-box img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s ease;
+}
+
+.video-card:hover .video-thumb-box img {
+  transform: scale(1.05);
+}
+
+.video-play-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.25);
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.video-card:hover .video-play-overlay {
+  opacity: 1;
+}
+
+.video-play-overlay i {
+  font-size: 42px;
+  color: #fff;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.5));
+}
+
+.video-card-info {
+  padding: 10px 12px 12px;
+}
+
+.video-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  line-height: 1.4;
+}
+
+.video-card-channel {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.video-card-skeleton {
+  border-radius: 14px;
+  aspect-ratio: 16 / 10;
+  background: #f0f0f0;
+}
+
+.video-error {
+  font-size: 14px;
+  color: var(--text-muted);
+  padding: 16px 0;
+}
+
+.video-error a {
+  color: var(--text-main);
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+/* ─── Video Lightbox ──────────────────────────────────────────────────────────── */
+.video-lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 6000;
+  animation: fadeIn 0.25s ease both;
   padding: 20px;
+}
+
+.video-lightbox-inner {
+  position: relative;
+  width: 100%;
+  max-width: 860px;
+}
+
+.video-lightbox-close {
+  position: absolute;
+  top: -44px;
+  right: 0;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.video-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.video-embed-wrapper {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #000;
+}
+
+.video-embed-wrapper iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+.video-lightbox-title {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 13px;
+  margin: 12px 0 0;
+  text-align: center;
+  line-height: 1.4;
+}
+
+/* Desktop: 3-col video grid */
+@media (min-width: 768px) {
+  .video-feed {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
 }

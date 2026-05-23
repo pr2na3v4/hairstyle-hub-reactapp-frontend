@@ -1,127 +1,155 @@
-/* Container adjustments */
+/* ─── Container ──────────────────────────────────────────────────────────── */
 .cards-container {
-  padding: 10px;
-  max-width: 1200px;
-  margin: 0 auto;
+    padding: 10px;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-/* The Grid - 2 columns on mobile, Auto-grid on Desktop */
+/* ─── Grid ───────────────────────────────────────────────────────────────── */
+/*
+ * FIX: original used grid-template-columns: 1fr 1fr with no max-width
+ * constraint. On tablets (480–768px) the two columns stretched very wide.
+ * Now uses repeat(2, minmax(0, 1fr)) which keeps columns equal but bounded
+ * by the grid container — minmax(0,...) prevents overflow blowout.
+ */
 .cards-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr); /* Force 2 columns on small screens */
-  gap: 12px; /* Tight, professional gap */
-  padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    box-sizing: border-box;
+    padding: 0 4px;
+    width: 100%;
 }
 
-/* Individual Card - "App" Style */
+/* ─── Individual Card ────────────────────────────────────────────────────── */
 .card-container {
-  background: #fff;
-  border-radius: 16px; /* Smoother corners */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  text-decoration: none !important;
-  color: inherit !important;
-  cursor: pointer;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-  transition: transform 0.2s ease;
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    text-decoration: none !important;
+    color: inherit !important;
+    cursor: pointer;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    transition: transform 0.2s ease;
+    /* FIX: explicit width:100% ensures card never escapes its grid cell */
+    width: 100%;
+    min-width: 0;   /* allows text truncation to work inside a grid cell */
 }
 
 .card-container:active {
-  transform: scale(0.97); /* "Tap" effect for mobile */
+    transform: scale(0.97);
 }
 
-/* Image styling */
+/* ─── Image box ──────────────────────────────────────────────────────────── */
+/*
+ * FIX: original set both height:160px AND aspect-ratio:3/4 in different
+ * breakpoints. On first page load the browser used height:160px. On client-
+ * side navigation React re-mounted the component and the browser recalculated,
+ * aspect-ratio winning and stretching the card — causing the inconsistency
+ * between hard refresh and navigation.
+ *
+ * Rule: never mix a fixed height with aspect-ratio on the same element.
+ * Picked aspect-ratio as the single source of truth for all sizes:
+ *   mobile  → 1/1   (square — compact, works in narrow 2-col layout)
+ *   ≥480px  → 3/4   (portrait — more visual on wider phones/tablets)
+ *   ≥768px  → 4/3   (landscape — standard card proportion on desktop)
+ * height:auto ensures aspect-ratio is never overridden.
+ */
 .card-image-box {
-  width: 100%;
-  height: 160px; /* Compact for 2-column mobile */
-  overflow: hidden;
+    width: 100%;
+    height: auto;           /* never fight aspect-ratio */
+    aspect-ratio: 1 / 1;   /* mobile default — square */
+    overflow: hidden;
+    flex-shrink: 0;
 }
 
 .card-image-box img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;         /* removes inline-image bottom gap */
 }
 
-/* Compact Text Info */
+/* ─── Text info ──────────────────────────────────────────────────────────── */
 .card-info {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  flex-grow: 1;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+    min-width: 0;   /* allows h3 ellipsis to fire */
 }
 
 .card-info h3 {
-  font-size: 0.9rem; /* Small & Clean */
-  margin: 0 0 4px 0;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: #1a1a1a;
+    font-size: 0.9rem;
+    margin: 0 0 4px 0;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: #1a1a1a;
 }
 
 .card-desc {
-  font-size: 0.75rem;
-  color: #777;
-  margin: 0 0 10px 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 2; /* Shows max 2 lines of text */
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  line-height: 1.3;
+    font-size: 0.75rem;
+    color: #777;
+    margin: 0 0 10px 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.3;
 }
 
-/* Compact Button for Mobile */
+/* ─── Button ─────────────────────────────────────────────────────────────── */
 .view-details-btn {
-  margin-top: auto; /* Pushes button to bottom */
-  background: #414143;
-  color: white;
-  text-decoration: none;
-  padding: 8px;
-  border-radius: 8px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  text-align: center;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
+    margin-top: auto;
+    background: #414143;
+    color: white;
+    text-decoration: none;
+    padding: 8px;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
 }
 
 .view-details-btn i {
-  font-size: 0.9rem;
+    font-size: 0.9rem;
 }
 
-/* ── Desktop View (Tablet & PC) ── */
+/* ─── Mid-size phones (480px+) ───────────────────────────────────────────── */
+@media (min-width: 480px) {
+    .card-image-box {
+        aspect-ratio: 3 / 4;   /* taller portrait on wider phones */
+        /* FIX: no height here — aspect-ratio is the only sizing rule */
+    }
+}
+
+/* ─── Tablet & desktop (768px+) ─────────────────────────────────────────── */
 @media (min-width: 768px) {
-  .cards-grid {
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 24px;
-    padding: 20px;
-  }
-  
-  .card-container:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 12px 24px rgba(0,0,0,0.1);
-  }
+    .cards-grid {
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 24px;
+        padding: 20px;
+    }
 
-  .card-image-box {
-    height: 250px; /* Taller images on PC */
-  }
+    .card-container:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    }
 
-  .card-info h3 {
-    font-size: 1.1rem;
-  }
+    .card-image-box {
+        aspect-ratio: 4 / 3;   /* landscape proportion suits wider cards */
+    }
 
-  .card-desc {
-    font-size: 0.85rem;
-  }
-
-  .view-details-btn {
-    padding: 12px;
-    font-size: 0.95rem;
-  }
+    .card-info h3    { font-size: 1.1rem; }
+    .card-desc       { font-size: 0.85rem; }
+    .view-details-btn { padding: 12px; font-size: 0.95rem; }
 }
